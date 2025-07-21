@@ -1,0 +1,37 @@
+src/
+*.log
+*.tgz
+*.local
+.vscode/
+.DS_Store
+*.local
+
+# Development files
+vite.config.ts
+tsconfig.json
+.eslintrc.cjs
+.prettierrc.json
+
+# Source files (we only want dist/)
+index.html
+src/main.ts
+src/App.vue
+src/style.css
+
+# Test files
+tests/
+*.test.*
+*.spec.*
+
+# Documentation build files
+.vitepress/
+docs/.vitepress/dist/
+
+# CI/CD
+.github/
+.travis.yml
+.circleci/
+
+# Development
+node_modules
+coverage 

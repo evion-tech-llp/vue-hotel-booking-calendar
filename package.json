@@ -1,0 +1,73 @@
+{
+  "name": "vue-hotel-booking-calendar",
+  "version": "1.0.0",
+  "description": "A Vue 3 inline calendar component for displaying hotel room availability with three states: available, blocked, and checkout-only",
+  "main": "dist/vue-hotel-booking-calendar.umd.js",
+  "module": "dist/vue-hotel-booking-calendar.es.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/vue-hotel-booking-calendar.es.js",
+      "require": "./dist/vue-hotel-booking-calendar.umd.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./dist/style.css": {
+      "import": "./dist/style.css",
+      "require": "./dist/style.css"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "build:lib": "vue-tsc && vite build --mode lib",
+    "preview": "vite preview",
+    "type-check": "vue-tsc --noEmit",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore",
+    "format": "prettier --write src/",
+    "prepublishOnly": "npm run build:lib"
+  },
+  "keywords": [
+    "vue",
+    "vue3",
+    "calendar",
+    "hotel",
+    "booking",
+    "availability",
+    "component",
+    "typescript",
+    "inline-calendar"
+  ],
+  "author": "Evion Technologies LLP",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evion/vue-hotel-booking-calendar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/evion/vue-hotel-booking-calendar/issues"
+  },
+  "homepage": "https://github.com/evion/vue-hotel-booking-calendar#readme",
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vitejs/plugin-vue": "^4.5.0",
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "@vue/tsconfig": "^0.4.0",
+    "eslint": "^8.54.0",
+    "eslint-plugin-vue": "^9.18.0",
+    "prettier": "^3.1.0",
+    "typescript": "~5.3.0",
+    "vite": "^5.0.0",
+    "vite-plugin-dts": "^3.6.4",
+    "vue": "^3.3.8",
+    "vue-tsc": "^1.8.22"
+  }
+} 
