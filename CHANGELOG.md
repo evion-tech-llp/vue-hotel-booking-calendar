@@ -7,6 +7,156 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2025-01-13
+
+### 🏨 Hotel Dashboard Component Release
+
+**🆕 Major New Component:**
+
+### 🎯 HotelDashboardCalendar Component
+
+- ✅ **Horizontal grid layout** - Dates as columns, rooms as rows for optimal space usage
+- ✅ **Room-wise booking management** - Visual grid showing all bookings per room
+- ✅ **Responsive without horizontal scroll** - All dates fit on screen with flexible columns
+- ✅ **Guest information display** - Guest initials in booking cells with full names on hover
+- ✅ **Custom status configuration** - Define your own booking statuses, colors, and labels
+- ✅ **Click-to-interact design** - Emit events to parent for booking management
+- ✅ **Tooltip system** - Hover for detailed booking information
+- ✅ **Month navigation** - Easy navigation between months
+- ✅ **Today highlighting** - Clear visual indicator for current date
+- ✅ **Weekend styling** - Subtle visual differentiation for weekends
+
+### 🎨 Elegant White Design System
+
+- ✅ **Pure white backgrounds** - Clean, professional aesthetic throughout
+- ✅ **Subtle shadows and borders** - Elegant depth without heaviness
+- ✅ **Refined typography** - Better font weights and letter spacing
+- ✅ **Smooth interactions** - Gentle hover effects and transitions
+- ✅ **Professional color palette** - Sophisticated gray tones for better readability
+- ✅ **Enhanced spacing** - More breathing room for better visual hierarchy
+
+### 🏗️ Component Architecture
+
+- ✅ **Dual component system** - Guest calendar + Hotel dashboard in one package
+- ✅ **Event-driven design** - Dashboard emits events, parent handles complex logic
+- ✅ **Simplified data models** - Minimal interfaces for better performance
+- ✅ **Optimized props** - Removed unused properties for cleaner API
+- ✅ **TypeScript enhanced** - Complete type definitions for both components
+
+### 📊 Hotel Dashboard Features
+
+**🎯 Core Functionality:**
+
+- **Booking visualization** - See all bookings across rooms and dates at a glance
+- **Status management** - Custom status colors and labels via props
+- **Interactive cells** - Click empty cells to create, click bookings for details
+- **Mobile responsive** - Optimized layout for all screen sizes
+- **Theme support** - Light and dark themes with elegant styling
+
+**📅 Data Structure:**
+
+```typescript
+interface Room {
+  id: string
+  number: string
+}
+
+interface Booking {
+  id: string
+  guestName: string
+  roomNumber: string
+  checkIn: string
+  checkOut: string
+  status: string
+}
+
+interface StatusConfig {
+  key: string
+  label: string
+  color: string
+  backgroundColor: string
+  darkBackgroundColor?: string
+}
+```
+
+**📡 Events:**
+
+- `booking-click`: Emitted when clicking existing booking
+- `booking-create`: Emitted when clicking empty cell
+- `update:selectedMonth`: Month navigation changes
+
+### 🎨 Design Improvements
+
+**🤍 Visual Refinements:**
+
+- Updated demo page with clean white aesthetic
+- Improved component styling with subtle borders
+- Enhanced user experience with smooth transitions
+- Better visual hierarchy throughout
+- Professional typography improvements
+
+**✨ User Experience:**
+
+- Cleaner interface reduces visual noise
+- Better contrast for improved readability
+- More intuitive interaction patterns
+- Elegant hover states and animations
+
+### 🔧 Technical Improvements
+
+**📦 Package Updates:**
+
+- Added HotelDashboardCalendar to main exports
+- Enhanced TypeScript definitions for dashboard component
+- Updated documentation with comprehensive examples
+- Improved tree-shaking support
+
+**⚡ Performance:**
+
+- Optimized rendering for large room/booking datasets
+- Better memory management in dashboard component
+- Streamlined prop interfaces for faster updates
+
+### 📚 Documentation
+
+- ✅ Complete hotel dashboard component documentation
+- ✅ Interactive demo showcasing both components
+- ✅ TypeScript usage examples for dashboard
+- ✅ Custom status configuration examples
+- ✅ Integration patterns for hotel management systems
+
+**🎯 Usage Example:**
+
+```vue
+<template>
+  <!-- Guest Booking Calendar -->
+  <HotelBookingCalendar
+    v-model="guestSelection"
+    :show-price-calculation="true"
+    @book-now="handleGuestBooking"
+  />
+
+  <!-- Hotel Dashboard Calendar -->
+  <HotelDashboardCalendar
+    :rooms="hotelRooms"
+    :bookings="hotelBookings"
+    :status-config="customStatuses"
+    @booking-click="showBookingDetails"
+    @booking-create="showCreateForm"
+  />
+</template>
+```
+
+### 🛠️ Migration Guide
+
+**✅ Fully Backward Compatible** - No breaking changes!
+
+- All existing HotelBookingCalendar functionality unchanged
+- New HotelDashboardCalendar is completely separate
+- Enhanced styling improves visual appeal without breaking existing styles
+
+---
+
 ## [1.0.2] - 2025-01-13
 
 ### 🎉 Feature Enhancement Release
