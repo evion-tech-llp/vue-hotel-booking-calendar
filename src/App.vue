@@ -285,70 +285,77 @@ body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f5f6fa;
+  background: #ffffff;
+  color: #2c3e50;
 }
 
 #app {
   min-height: 100vh;
-  padding: 20px;
+  padding: 40px 20px;
 }
 
 .demo-container {
   max-width: 1200px;
   margin: 0 auto;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  border: 1px solid #f1f3f4;
 }
 
 h1 {
   text-align: center;
-  color: #2c3e50;
-  font-size: 32px;
-  font-weight: 700;
+  color: #1a202c;
+  font-size: 36px;
+  font-weight: 600;
   margin: 0;
-  padding: 40px 40px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  padding: 60px 40px 20px;
+  background: white;
+  border-bottom: 1px solid #f1f3f4;
+  letter-spacing: -0.02em;
 }
 
 .version-badge {
   text-align: center;
-  margin: -10px 0 20px;
-  padding: 0 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 0 0 30px;
+  padding: 0 40px 30px;
+  background: white;
+  border-bottom: 1px solid #f1f3f4;
 }
 
 .version-tag {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
+  background: #f8f9fa;
+  color: #495057;
+  padding: 6px 16px;
+  border-radius: 20px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
+  border: 1px solid #e9ecef;
+  display: inline-block;
 }
 
 .version-label {
-  color: rgba(255, 255, 255, 0.9);
+  color: #6c757d;
   font-size: 11px;
   margin-left: 8px;
 }
 
 .demo-intro {
   text-align: center;
-  color: #666;
-  font-size: 16px;
+  color: #495057;
+  font-size: 18px;
   line-height: 1.6;
   margin: 0;
-  padding: 0 40px 30px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: rgba(255, 255, 255, 0.9);
+  padding: 40px 40px 50px;
+  background: white;
+  font-weight: 400;
 }
 
 .demo-section {
-  padding: 40px;
-  border-bottom: 1px solid #eee;
+  padding: 50px 40px;
+  border-bottom: 1px solid #f1f3f4;
+  background: white;
 }
 
 .demo-section:last-child {
@@ -356,48 +363,58 @@ h1 {
 }
 
 .demo-section h2 {
-  color: #2c3e50;
-  font-size: 24px;
+  color: #1a202c;
+  font-size: 28px;
   font-weight: 600;
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
 }
 
 .demo-description {
-  color: #666;
+  color: #495057;
   font-size: 16px;
-  line-height: 1.6;
-  margin: 0 0 30px 0;
+  line-height: 1.7;
+  margin: 0 0 40px 0;
+  font-weight: 400;
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin-top: 30px;
 }
 
 .feature-card {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 24px;
-  border: 1px solid #e9ecef;
+  background: #fdfdfd;
+  border-radius: 8px;
+  padding: 30px;
+  border: 1px solid #f1f3f4;
+  transition: all 0.2s ease;
+}
+
+.feature-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: #e9ecef;
 }
 
 .feature-card h3 {
   margin: 0 0 12px 0;
   font-size: 18px;
-  color: #2c3e50;
+  color: #1a202c;
+  font-weight: 600;
 }
 
 .feature-card p {
   margin: 0;
-  color: #666;
-  line-height: 1.5;
+  color: #495057;
+  line-height: 1.6;
+  font-weight: 400;
 }
 
 @media (max-width: 768px) {
   #app {
-    padding: 10px;
+    padding: 20px 10px;
   }
 
   .demo-container {
@@ -405,20 +422,30 @@ h1 {
   }
 
   h1 {
-    font-size: 24px;
-    padding: 30px 20px 15px;
+    font-size: 28px;
+    padding: 40px 20px 15px;
   }
 
   .demo-intro {
-    padding: 0 20px 20px;
+    padding: 30px 20px 40px;
+    font-size: 16px;
   }
 
   .demo-section {
-    padding: 20px;
+    padding: 40px 20px;
+  }
+
+  .demo-section h2 {
+    font-size: 24px;
   }
 
   .features-grid {
     grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .feature-card {
+    padding: 24px;
   }
 }
 </style>
