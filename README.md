@@ -1,6 +1,6 @@
 # Vue Hotel Booking Calendar
 
-A comprehensive Vue 3 calendar component designed specifically for hotel booking systems. Features intelligent price calculation, booking flow, and error handling with elegant design and accessibility.
+A comprehensive Vue 3 calendar component suite designed specifically for hotel booking systems. Features both guest booking calendar and hotel owner dashboard with intelligent price calculation, booking flow, and elegant design.
 
 [![npm version](https://badge.fury.io/js/vue-hotel-booking-calendar.svg)](https://www.npmjs.com/package/vue-hotel-booking-calendar)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,29 +12,40 @@ A comprehensive Vue 3 calendar component designed specifically for hotel booking
 
 ## ✨ Features
 
-🎨 **Beautiful Design** - Modern, clean interface with elegant light and dark themes  
+### 🏷️ **Guest Booking Calendar**
+
 💰 **Price Calculation** - Built-in pricing system with multi-currency support  
 📊 **Booking Summary** - Compact booking flow with "Book Now" functionality  
 ⚠️ **Smart Error Handling** - Visual feedback for blocked date selections  
+🌍 **Multi-Currency** - GBP, USD, EUR, JPY with proper locale formatting  
+🚫 **Smart Validation** - Prevents selection across blocked dates with helpful errors
+
+### 🏨 **Hotel Dashboard Calendar**
+
+📅 **Room-wise Grid** - Horizontal calendar showing all rooms and bookings  
+🎯 **Custom Statuses** - Define your own booking statuses with colors  
+👥 **Guest Management** - View guest initials with full names on hover  
+📱 **No Horizontal Scroll** - All dates fit perfectly on any screen size  
+🔗 **Event-Driven** - Emits events for parent component to handle bookings  
+💅 **Elegant Design** - Clean white aesthetic with subtle shadows
+
+### 🎨 **Shared Features**
+
+🎨 **Beautiful Design** - Modern, clean interface with elegant white theme  
 📱 **Responsive Design** - Works perfectly on desktop and mobile devices  
 ♿ **Accessibility** - Full keyboard navigation and screen reader support  
-🌍 **Multi-Currency** - GBP, USD, EUR, JPY with proper locale formatting  
 ⚡ **TypeScript** - Fully typed for better developer experience  
-🎯 **Hotel-Focused** - Three availability states designed for hospitality  
-🔧 **Highly Customizable** - Extensive props and styling options  
-🚫 **Smart Validation** - Prevents selection across blocked dates with helpful errors  
-🌙 **Elegant Themes** - Professional dark mode support  
-📅 **Flexible Data** - Only specify blocked/checkout dates, others auto-available
+🌙 **Theme Support** - Professional light and dark themes  
+🔧 **Highly Customizable** - Extensive props and styling options
 
-## 🆕 What's New in v1.0.2
+## 🆕 What's New in v1.0.3
 
-- ✅ **Price Calculation System** - Real-time pricing with daily breakdowns
-- ✅ **Compact Booking Summary** - Space-efficient booking flow
-- ✅ **Book Now Integration** - Complete booking workflow with events
-- ✅ **Enhanced Error Handling** - Visual feedback for selection issues
-- ✅ **Multi-Currency Support** - GBP default with USD, EUR, JPY support
-- ✅ **Improved UX** - Better visual hierarchy and user feedback
-- ✅ **Dynamic Demo** - Always-current dates that never become outdated
+- ✅ **Hotel Dashboard Component** - New horizontal grid for room-wise booking management
+- ✅ **Elegant White Design** - Clean, professional aesthetic with subtle shadows
+- ✅ **Custom Status System** - Define your own booking statuses and colors
+- ✅ **Event-Driven Architecture** - Dashboard emits events for flexible integration
+- ✅ **Optimized Performance** - Streamlined components with better prop management
+- ✅ **Enhanced Documentation** - Complete guide for both components
 
 ## 📦 Installation
 
@@ -53,7 +64,7 @@ yarn add vue-hotel-booking-calendar
 **📦 Package Info:**
 
 - [View on npm](https://www.npmjs.com/package/vue-hotel-booking-calendar)
-- Bundle size: ~12KB gzipped
+- Bundle size: ~15KB gzipped (both components)
 - Zero dependencies (peer: Vue 3+)
 
 ## 🚀 Quick Start
@@ -75,24 +86,102 @@ app.mount('#app')
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { HotelBookingCalendar } from 'vue-hotel-booking-calendar'
+import { HotelBookingCalendar, HotelDashboardCalendar } from 'vue-hotel-booking-calendar'
 import 'vue-hotel-booking-calendar/dist/style.css'
 
-const selectedDates = ref({ checkIn: null, checkOut: null })
+const guestDates = ref({ checkIn: null, checkOut: null })
+const dashboardMonth = ref(new Date())
 </script>
 
 <template>
+  <!-- Guest Booking Calendar -->
   <HotelBookingCalendar
-    v-model="selectedDates"
+    v-model="guestDates"
     :show-price-calculation="true"
     currency="GBP"
     :base-price="85"
     @book-now="handleBooking"
   />
+
+  <!-- Hotel Dashboard Calendar -->
+  <HotelDashboardCalendar
+    :rooms="hotelRooms"
+    :bookings="hotelBookings"
+    :selected-month="dashboardMonth"
+    @booking-click="showBookingDetails"
+    @booking-create="showCreateForm"
+  />
 </template>
 ```
 
-## 💰 Price Calculation & Booking Flow
+## 🏨 Hotel Dashboard Calendar
+
+Perfect for hotel owners and staff to manage bookings across all rooms:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { HotelDashboardCalendar } from 'vue-hotel-booking-calendar'
+import type { Room, Booking, StatusConfig } from 'vue-hotel-booking-calendar'
+
+const rooms = ref<Room[]>([
+  { id: '1', number: '101' },
+  { id: '2', number: '102' },
+  { id: '3', number: '201' },
+])
+
+const bookings = ref<Booking[]>([
+  {
+    id: '1',
+    guestName: 'John Smith',
+    roomNumber: '101',
+    checkIn: '2025-01-15',
+    checkOut: '2025-01-18',
+    status: 'confirmed',
+  },
+])
+
+const customStatuses = ref<StatusConfig[]>([
+  {
+    key: 'confirmed',
+    label: 'Confirmed',
+    color: '#155e75',
+    backgroundColor: '#a7f3d0',
+  },
+  {
+    key: 'pending',
+    label: 'Pending Review',
+    color: '#b45309',
+    backgroundColor: '#fed7aa',
+  },
+])
+
+const handleBookingClick = (booking: Booking) => {
+  // Show booking details modal
+  console.log('Booking clicked:', booking)
+}
+
+const handleBookingCreate = (data: { roomId: string; date: string }) => {
+  // Show create booking form
+  console.log('Create booking:', data)
+}
+</script>
+
+<template>
+  <HotelDashboardCalendar
+    :rooms="rooms"
+    :bookings="bookings"
+    :status-config="customStatuses"
+    theme="light"
+    @booking-click="handleBookingClick"
+    @booking-create="handleBookingCreate"
+  />
+</template>
+```
+
+## 💰 Guest Booking Calendar
+
+Enhanced booking experience for guests:
 
 ```vue
 <script setup lang="ts">
@@ -197,7 +286,9 @@ const availabilityData = [
 ]
 ```
 
-## 🛠 Props
+## 🛠 Component Props
+
+### 🏷️ HotelBookingCalendar (Guest Calendar)
 
 | Prop                   | Type          | Default                             | Description                         |
 | ---------------------- | ------------- | ----------------------------------- | ----------------------------------- |
@@ -215,7 +306,19 @@ const availabilityData = [
 | `minDate`              | `String/Date` | `null`                              | Minimum selectable date             |
 | `maxDate`              | `String/Date` | `null`                              | Maximum selectable date             |
 
-## 📡 Events
+### 🏨 HotelDashboardCalendar (Hotel Management)
+
+| Prop            | Type     | Default           | Description                  |
+| --------------- | -------- | ----------------- | ---------------------------- |
+| `rooms`         | `Array`  | `[]`              | Array of room objects        |
+| `bookings`      | `Array`  | `[]`              | Array of booking objects     |
+| `selectedMonth` | `Date`   | `new Date()`      | Currently displayed month    |
+| `theme`         | `String` | `'light'`         | Theme ('light' or 'dark')    |
+| `statusConfig`  | `Array`  | `defaultStatuses` | Custom status configurations |
+
+## 📡 Component Events
+
+### 🏷️ HotelBookingCalendar Events
 
 | Event               | Payload                      | Description                 |
 | ------------------- | ---------------------------- | --------------------------- |
@@ -226,11 +329,20 @@ const availabilityData = [
 | `selection-error`   | `SelectionError`             | Selection validation error  |
 | `book-now`          | `{ selection, calculation }` | Book Now button clicked     |
 
+### 🏨 HotelDashboardCalendar Events
+
+| Event                  | Payload            | Description              |
+| ---------------------- | ------------------ | ------------------------ |
+| `update:selectedMonth` | `Date`             | Month navigation changed |
+| `booking-click`        | `Booking`          | Existing booking clicked |
+| `booking-create`       | `{ roomId, date }` | Empty cell clicked       |
+
 ## 🎯 TypeScript Support
 
-Full TypeScript definitions included:
+Full TypeScript definitions included for both components:
 
 ```typescript
+// Guest Calendar Types
 import type {
   DateAvailability,
   PriceCalculation,
@@ -238,6 +350,41 @@ import type {
   CalendarProps,
   CalendarEmits,
 } from 'vue-hotel-booking-calendar'
+
+// Hotel Dashboard Types
+import type {
+  Room,
+  Booking,
+  StatusConfig,
+  DashboardCalendarProps,
+  DashboardCalendarEmits,
+} from 'vue-hotel-booking-calendar'
+```
+
+## 🏨 Hotel Dashboard Data Models
+
+```typescript
+interface Room {
+  id: string // Unique room identifier
+  number: string // Room number/name (e.g., "101", "Presidential Suite")
+}
+
+interface Booking {
+  id: string // Unique booking identifier
+  guestName: string // Full guest name
+  roomNumber: string // Room number (must match Room.number)
+  checkIn: string // ISO date string (YYYY-MM-DD)
+  checkOut: string // ISO date string (YYYY-MM-DD)
+  status: string // Status key (matches StatusConfig.key)
+}
+
+interface StatusConfig {
+  key: string // Status identifier
+  label: string // Display label
+  color: string // Text color
+  backgroundColor: string // Cell background color
+  darkBackgroundColor?: string // Optional dark theme background
+}
 ```
 
 ## 🎨 Custom Styling
@@ -245,6 +392,7 @@ import type {
 Override CSS custom properties:
 
 ```css
+/* Guest Calendar Styling */
 .hotel-booking-calendar {
   --calendar-border-radius: 12px;
   --calendar-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -252,15 +400,27 @@ Override CSS custom properties:
   --blocked-color: #ef4444;
   --checkout-color: #f59e0b;
 }
+
+/* Dashboard Calendar Styling */
+.hotel-dashboard-calendar {
+  --dashboard-border-radius: 12px;
+  --dashboard-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --room-header-background: white;
+  --date-header-background: white;
+  --cell-border-color: #f1f3f4;
+}
 ```
 
 ## ♿ Accessibility
+
+Both components include comprehensive accessibility features:
 
 - Full keyboard navigation
 - Screen reader support
 - ARIA labels and descriptions
 - High contrast support
 - Focus management
+- Semantic HTML structure
 
 ## 📱 Browser Support
 
@@ -279,7 +439,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## 🏢 About Evion Technologies
 
-Built with ❤️ by [Evion Technologies LLP](https://evion.tech) - Specialists in Vue.js and TypeScript development.
+Built with ❤️ by [Evion Technologies LLP](https://eviontech.com) - Specialists in Vue.js and TypeScript development.
 
 ---
 

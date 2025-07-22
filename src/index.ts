@@ -1,16 +1,19 @@
 import type { App } from 'vue'
 import HotelBookingCalendar from './components/HotelBookingCalendar.vue'
+import HotelDashboardCalendar from './components/HotelDashboardCalendar.vue'
 
 // Export the component
-export { HotelBookingCalendar }
+export { default as HotelBookingCalendar } from './components/HotelBookingCalendar.vue'
+export { default as HotelDashboardCalendar } from './components/HotelDashboardCalendar.vue'
 
 // Export types
-export * from './types'
+export type * from './types'
 
 // Plugin install function for global registration
 const plugin = {
   install(app: App) {
     app.component('HotelBookingCalendar', HotelBookingCalendar)
+    app.component('HotelDashboardCalendar', HotelDashboardCalendar)
   },
 }
 

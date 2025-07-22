@@ -1,7 +1,7 @@
 {
   "name": "vue-hotel-booking-calendar",
-  "version": "1.0.2",
-  "description": "A Vue 3 calendar component for hotel bookings with price calculation, error handling, and booking flow. Features three availability states, multi-currency support, and compact booking summary.",
+  "version": "1.0.3",
+  "description": "A Vue 3 calendar component suite for hotel bookings with price calculation, hotel dashboard, and booking flow. Features guest booking calendar and owner dashboard with elegant white design.",
   "main": "dist/vue-hotel-booking-calendar.umd.js",
   "module": "dist/vue-hotel-booking-calendar.es.js",
   "types": "dist/index.d.ts",
@@ -44,7 +44,12 @@
     "multi-currency",
     "gbp",
     "booking-summary",
-    "error-handling"
+    "error-handling",
+    "hotel-dashboard",
+    "room-management",
+    "booking-grid",
+    "guest-calendar",
+    "elegant-design"
   ],
   "author": "Evion Technologies LLP",
   "license": "MIT",

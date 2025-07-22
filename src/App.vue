@@ -3,142 +3,72 @@
     <div class="demo-container">
       <h1>Vue Hotel Booking Calendar Demo</h1>
       <div class="version-badge">
-        <span class="version-tag">v1.0.2</span>
+        <span class="version-tag">v1.0.3</span>
         <span class="version-label">Latest Release</span>
       </div>
       <p class="demo-intro">
-        Interactive demo showcasing the new v1.0.2 features including price calculation, booking flow, and error
-        handling.
+        Interactive demo showcasing the new v1.0.2 features including price calculation, booking flow, and the new hotel
+        dashboard component.
         <br><strong>All dates are dynamically generated</strong> relative to today ({{ formatDate(today) }}) so the demo
         stays current!
       </p>
 
-      <div class="demo-section featured">
-        <div class="feature-badge">🆕 NEW in v1.0.2</div>
-        <h2>💰 Price Calculation & Booking Flow</h2>
-        <p class="demo-description">
-          Complete booking experience with real-time price calculation, compact summary, and Book Now functionality.
-          Select dates to see total pricing with daily breakdown. Base price: £95/night.
-        </p>
-        <HotelBookingCalendar v-model="priceSelection" :availability-data="dynamicAvailabilityWithPrices"
-          :show-prices="true" :show-price-calculation="true" :base-price="95" currency="GBP" locale="en-GB"
-          @selection-change="onSelectionChange" @price-calculation="onPriceCalculation" @book-now="onBookNow" />
-        <div v-if="currentPriceCalculation" class="price-info">
-          <h4>💰 Live Price Calculation:</h4>
-          <p><strong>Nights:</strong> {{ currentPriceCalculation.nights }}</p>
-          <p><strong>Total:</strong> {{ formatPriceGBP(currentPriceCalculation.totalPrice) }}</p>
-          <p><strong>Average per night:</strong> {{ formatPriceGBP(currentPriceCalculation.averagePerNight) }}</p>
-        </div>
-        <div v-if="lastBooking" class="booking-info">
-          <h4>🎯 Last Booking Event:</h4>
-          <p><strong>Check-in:</strong> {{ lastBooking.selection.checkIn }}</p>
-          <p><strong>Check-out:</strong> {{ lastBooking.selection.checkOut }}</p>
-          <p><strong>Total:</strong> {{ formatPriceGBP(lastBooking.calculation.totalPrice) }}</p>
-          <p class="booking-note">Ready for payment integration!</p>
-        </div>
-      </div>
-
-      <div class="demo-section featured">
-        <div class="feature-badge">🆕 NEW in v1.0.2</div>
-        <h2>⚠️ Intelligent Error Handling</h2>
-        <p class="demo-description">
-          Smart error handling with visual feedback when selecting ranges with blocked dates.
-          Try selecting a range that includes red (blocked) dates - you'll see helpful error messages.
-          <strong>Tip:</strong> Try selecting from {{ formatDateShort(getDateDaysFromNow(7)) }} to {{
-            formatDateShort(getDateDaysFromNow(12)) }} to see the error in action.
-        </p>
-        <HotelBookingCalendar v-model="errorSelection" :availability-data="dynamicAvailabilityWithBlockedRanges"
-          :show-prices="true" :show-price-calculation="true" :show-selection-errors="true" :base-price="78"
-          currency="GBP" locale="en-GB" @selection-error="onSelectionError" @price-calculation="onPriceCalculation" />
-        <div v-if="lastSelectionError" class="error-info">
-          <h4>🚨 Last Selection Error:</h4>
-          <p><strong>Type:</strong> {{ lastSelectionError.type }}</p>
-          <p><strong>Message:</strong> {{ lastSelectionError.message }}</p>
-          <p v-if="lastSelectionError.blockedDates" class="blocked-dates">
-            <strong>Blocked dates:</strong> {{ formatBlockedDates(lastSelectionError.blockedDates) }}
-          </p>
-        </div>
-      </div>
-
+      <!-- Guest Booking Calendar Demo -->
       <div class="demo-section">
-        <h2>🌙 Dark Theme with Pricing</h2>
+        <h2>🏷️ Guest Booking Calendar</h2>
         <p class="demo-description">
-          Dark theme version with all features enabled. Perfect for dark mode applications.
-          Base price: ¥15,000/night with Japanese Yen formatting.
+          Enhanced calendar for guests with price calculation, booking summary, and currency formatting.
+          Base price: £85/night. Select dates to see pricing and booking flow.
         </p>
-        <HotelBookingCalendar v-model="darkSelection" :availability-data="dynamicAvailabilityWithPrices" theme="dark"
-          :show-prices="true" :show-price-calculation="true" :base-price="15000" currency="JPY" locale="ja-JP" />
+        <HotelBookingCalendar v-model="guestSelection" :availability-data="guestAvailabilityData" :base-price="85"
+          currency="GBP" :show-price-calculation="true" :show-selection-errors="true" theme="light"
+          @selection-error="handleSelectionError" @price-calculation="handlePriceCalculation"
+          @book-now="handleBookNow" />
       </div>
 
+      <!-- Hotel Dashboard Demo -->
       <div class="demo-section">
-        <h2>📅 Basic Usage</h2>
+        <h2>🏨 Hotel Dashboard Calendar</h2>
         <p class="demo-description">
-          Simple calendar showing availability states. Green = available, Red = blocked, Half-colors = checkout-only.
-          Try selecting a date range - blocked dates will prevent selection.
+          Hotel dashboard component focused on clean display and event emission. Shows room-wise booking grid with guest
+          initials.
+          <br><strong>Hover over bookings</strong> to see full guest name and booking details in tooltip.
+          <br><strong>Click bookings</strong> to emit booking-click event to parent for detailed handling.
+          <br><strong>Click empty cells</strong> to emit booking-create event to parent.
+          <br><strong>Parent handles</strong> all modals, forms, and booking management logic.
         </p>
-        <HotelBookingCalendar v-model="selection" :availability-data="dynamicBasicAvailability"
-          @date-click="onDateClick" @selection-change="onSelectionChange" />
+        <HotelDashboardCalendar :rooms="sampleRooms" :bookings="sampleBookings" :selected-month="dashboardMonth"
+          :status-config="customStatusConfig" theme="light" @update:selected-month="dashboardMonth = $event"
+          @booking-click="handleBookingClick" @booking-create="handleBookingCreate" />
       </div>
 
+      <!-- Demo Features List -->
       <div class="demo-section">
-        <h2>💵 Different Currencies & Locales</h2>
-        <p class="demo-description">
-          Showcase different currency formatting and locales. This example uses British Pounds with UK locale.
-        </p>
-        <HotelBookingCalendar v-model="currencySelection" :availability-data="dynamicAvailabilityWithPrices"
-          :show-prices="true" :show-price-calculation="true" :base-price="85" currency="GBP" locale="en-GB" />
-      </div>
-
-      <div class="demo-section">
-        <h2>📍 Custom Date Range</h2>
-        <p class="demo-description">
-          Calendar with custom min/max dates. Range: {{ formatDateShort(getDateMonthsFromNow(1)) }} to {{
-            formatDateShort(getDateMonthsFromNow(4)) }}
-        </p>
-        <HotelBookingCalendar v-model="selection4" :availability-data="dynamicBasicAvailability"
-          :min-date="getDateMonthsFromNow(1)" :max-date="getDateMonthsFromNow(4)" :disable-past-dates="false" />
-      </div>
-
-      <div class="demo-section">
-        <h2>📋 Single Day Selection</h2>
-        <p class="demo-description">
-          Calendar allowing single day selections (same check-in and check-out date).
-        </p>
-        <HotelBookingCalendar v-model="selection5" :availability-data="dynamicBasicAvailability"
-          :allow-single-day="true" :show-prices="true" />
-      </div>
-
-      <div class="selection-info">
-        <h3>📊 Current Selection States:</h3>
-        <div class="selections-grid">
-          <div class="selection-item">
-            <h4>Price Calculation:</h4>
-            <p><strong>Check-in:</strong> {{ priceSelection.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ priceSelection.checkOut || 'Not selected' }}</p>
+        <h2>✨ Features Showcase</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <h3>💰 Price Calculation</h3>
+            <p>Real-time pricing with currency support, daily breakdowns, and booking summaries.</p>
           </div>
-
-          <div class="selection-item">
-            <h4>Error Handling:</h4>
-            <p><strong>Check-in:</strong> {{ errorSelection.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ errorSelection.checkOut || 'Not selected' }}</p>
+          <div class="feature-card">
+            <h3>🚨 Smart Error Handling</h3>
+            <p>Intelligent validation for blocked dates, minimum stays, and booking conflicts.</p>
           </div>
-
-          <div class="selection-item">
-            <h4>Dark Theme:</h4>
-            <p><strong>Check-in:</strong> {{ darkSelection.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ darkSelection.checkOut || 'Not selected' }}</p>
+          <div class="feature-card">
+            <h3>📊 Hotel Dashboard</h3>
+            <p>Complete booking management with room-wise views, occupancy tracking, and guest management.</p>
           </div>
-
-          <div class="selection-item">
-            <h4>Currency Demo:</h4>
-            <p><strong>Check-in:</strong> {{ currencySelection.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ currencySelection.checkOut || 'Not selected' }}</p>
+          <div class="feature-card">
+            <h3>🌍 Internationalization</h3>
+            <p>Multi-currency support with proper locale formatting and date handling.</p>
           </div>
-
-          <div class="selection-item">
-            <h4>Basic Calendar:</h4>
-            <p><strong>Check-in:</strong> {{ selection.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ selection.checkOut || 'Not selected' }}</p>
+          <div class="feature-card">
+            <h3>📱 Responsive Design</h3>
+            <p>Mobile-first design that works perfectly on all device sizes.</p>
+          </div>
+          <div class="feature-card">
+            <h3>🎨 Themeable</h3>
+            <p>Light and dark theme support with customizable styling options.</p>
           </div>
         </div>
       </div>
@@ -147,481 +77,375 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import HotelBookingCalendar from './components/HotelBookingCalendar.vue'
-import type { DateAvailability, AvailabilityStatus, SelectionError, PriceCalculation } from './types'
+import HotelDashboardCalendar from './components/HotelDashboardCalendar.vue'
+import type {
+  DateAvailability,
+  DateRange,
+  SelectionError,
+  PriceCalculation,
+  Room,
+  Booking,
+  BookingStatus,
+  StatusConfig
+} from './types'
 
-// Get current date for dynamic date generation
+// Guest calendar state
+const guestSelection = ref<DateRange>({ checkIn: null, checkOut: null })
+const dashboardMonth = ref(new Date())
 const today = new Date()
-today.setHours(0, 0, 0, 0)
 
-// Demo data - New selections for enhanced features
-const priceSelection = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-const errorSelection = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-const darkSelection = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-const currencySelection = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-// Existing selections
-const selection = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-const selection4 = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-const selection5 = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-// Event data
-const currentPriceCalculation = ref<PriceCalculation | null>(null)
-const lastSelectionError = ref<SelectionError | null>(null)
-const lastBooking = ref<{ selection: { checkIn: string | null; checkOut: string | null }; calculation: PriceCalculation } | null>(null)
-
-// Helper functions for dynamic date generation
-const getDateDaysFromNow = (days: number): Date => {
+// Helper function to get dynamic dates
+const getDynamicDate = (daysFromToday: number): string => {
   const date = new Date(today)
-  date.setDate(date.getDate() + days)
-  return date
-}
-
-const getDateMonthsFromNow = (months: number): Date => {
-  const date = new Date(today)
-  date.setMonth(date.getMonth() + months)
-  return date
-}
-
-const formatDateToString = (date: Date): string => {
+  date.setDate(date.getDate() + daysFromToday)
   return date.toISOString().split('T')[0]
 }
 
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+// Sample data for guest calendar
+const guestAvailabilityData = computed<DateAvailability[]>(() => [
+  // Next 60 days with realistic availability
+  ...Array.from({ length: 60 }, (_, i) => {
+    const date = getDynamicDate(i)
+    const dayOfWeek = new Date(date).getDay()
+
+    // Weekend premium pricing
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+    const basePrice = isWeekend ? 110 : 85
+
+    // Some random blocked dates
+    const isBlocked = [5, 12, 19, 25, 31, 38, 45].includes(i)
+
+    return {
+      date,
+      status: isBlocked ? 'blocked' as const : 'available' as const,
+      price: basePrice,
+      minStay: isWeekend ? 2 : 1,
+      maxStay: 14
+    }
   })
-}
+])
 
-const formatDateShort = (date: Date): string => {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric'
-  })
-}
+// Sample rooms data - minimal interface
+const sampleRooms = computed<Room[]>(() => [
+  { id: '1', number: '101' },
+  { id: '2', number: '102' },
+  { id: '3', number: '201' },
+  { id: '4', number: '202' },
+  { id: '5', number: '301' }
+])
 
-// Dynamic availability data generation
-const dynamicAvailabilityWithPrices = computed((): DateAvailability[] => {
-  const availability: DateAvailability[] = []
-
-  // Generate data for next 90 days
-  for (let i = 1; i <= 90; i++) {
-    const date = getDateDaysFromNow(i)
-    const dateString = formatDateToString(date)
-    const dayOfWeek = date.getDay()
-
-    // Create patterns for blocked dates (every 8-10 days with some randomness)
-    const isBlocked = i % 9 === 0 || i % 13 === 0 || i === 15 || i === 16 || i === 22 || i === 28
-
-    // Checkout-only dates (day after some blocked periods)
-    const isCheckoutOnly = i === 17 || i === 25 || i === 35 || i === 45
-
-    if (isBlocked) {
-      availability.push({
-        date: dateString,
-        status: 'blocked'
-      })
-    } else if (isCheckoutOnly) {
-      availability.push({
-        date: dateString,
-        status: 'checkout-only',
-        price: 89 + Math.floor(Math.random() * 40) // Random price between 89-129
-      })
-    } else {
-      // Calculate dynamic pricing based on patterns
-      let basePrice = 120
-
-      // Weekend premium (Friday, Saturday, Sunday)
-      if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
-        basePrice += 60
-      }
-
-      // Month-based seasonal pricing
-      const month = date.getMonth()
-      if (month >= 5 && month <= 7) { // Summer months (Jun, Jul, Aug)
-        basePrice += 30
-      } else if (month === 11 || month === 0) { // Holiday season (Dec, Jan)
-        basePrice += 50
-      }
-
-      // Add some randomness
-      basePrice += Math.floor(Math.random() * 30) - 15
-
-      availability.push({
-        date: dateString,
-        status: 'available',
-        price: Math.max(basePrice, 90) // Minimum price of 90
-      })
-    }
+// Sample bookings data - minimal interface
+const sampleBookings = computed<Booking[]>(() => [
+  {
+    id: '1',
+    guestName: 'John Smith',
+    roomNumber: '101',
+    checkIn: getDynamicDate(2),
+    checkOut: getDynamicDate(5),
+    status: 'confirmed'
+  },
+  {
+    id: '2',
+    guestName: 'Sarah Johnson',
+    roomNumber: '102',
+    checkIn: getDynamicDate(7),
+    checkOut: getDynamicDate(10),
+    status: 'checked-in'
+  },
+  {
+    id: '3',
+    guestName: 'Michael Brown',
+    roomNumber: '201',
+    checkIn: getDynamicDate(1),
+    checkOut: getDynamicDate(4),
+    status: 'confirmed'
+  },
+  {
+    id: '4',
+    guestName: 'Emma Wilson',
+    roomNumber: '202',
+    checkIn: getDynamicDate(15),
+    checkOut: getDynamicDate(17),
+    status: 'pending'
+  },
+  {
+    id: '5',
+    guestName: 'David Taylor',
+    roomNumber: '301',
+    checkIn: getDynamicDate(20),
+    checkOut: getDynamicDate(25),
+    status: 'confirmed'
+  },
+  {
+    id: '6',
+    guestName: 'Lisa Anderson',
+    roomNumber: '101',
+    checkIn: getDynamicDate(12),
+    checkOut: getDynamicDate(14),
+    status: 'cancelled'
   }
+])
 
-  return availability
-})
-
-// Availability data specifically designed for error testing
-const dynamicAvailabilityWithBlockedRanges = computed((): DateAvailability[] => {
-  const availability: DateAvailability[] = []
-
-  // Generate data for next 60 days with specific blocked patterns
-  for (let i = 1; i <= 60; i++) {
-    const date = getDateDaysFromNow(i)
-    const dateString = formatDateToString(date)
-    const dayOfWeek = date.getDay()
-
-    // Create specific blocked ranges for error testing
-    const isBlocked =
-      (i >= 7 && i <= 10) || // Block days 7-10 for error testing
-      (i >= 18 && i <= 20) || // Block days 18-20
-      i === 25 || i === 32 || i === 38
-
-    const isCheckoutOnly = i === 11 || i === 21 || i === 30
-
-    if (isBlocked) {
-      availability.push({
-        date: dateString,
-        status: 'blocked'
-      })
-    } else if (isCheckoutOnly) {
-      availability.push({
-        date: dateString,
-        status: 'checkout-only',
-        price: 95 + Math.floor(Math.random() * 30)
-      })
-    } else {
-      // Pricing logic
-      let basePrice = 110
-
-      if (dayOfWeek === 5 || dayOfWeek === 6) {
-        basePrice += 40
-      }
-
-      basePrice += Math.floor(Math.random() * 25) - 10
-
-      availability.push({
-        date: dateString,
-        status: 'available',
-        price: Math.max(basePrice, 80)
-      })
-    }
+// Custom status configuration example
+const customStatusConfig = computed<StatusConfig[]>(() => [
+  {
+    key: 'available',
+    label: 'Available',
+    color: '#666',
+    backgroundColor: '#f8f9fa',
+    darkBackgroundColor: '#2a2a2a'
+  },
+  {
+    key: 'confirmed',
+    label: 'Confirmed',
+    color: '#155e75',
+    backgroundColor: '#a7f3d0',
+    darkBackgroundColor: '#064e3b'
+  },
+  {
+    key: 'pending',
+    label: 'Pending Review',
+    color: '#b45309',
+    backgroundColor: '#fed7aa',
+    darkBackgroundColor: '#7c2d12'
+  },
+  {
+    key: 'checked-in',
+    label: 'Guest Arrived',
+    color: '#1e40af',
+    backgroundColor: '#93c5fd',
+    darkBackgroundColor: '#1e3a8a'
+  },
+  {
+    key: 'checked-out',
+    label: 'Departed',
+    color: '#7c3aed',
+    backgroundColor: '#d8b4fe',
+    darkBackgroundColor: '#5b21b6'
+  },
+  {
+    key: 'cancelled',
+    label: 'Cancelled',
+    color: '#dc2626',
+    backgroundColor: '#fca5a5',
+    darkBackgroundColor: '#7f1d1d'
   }
+])
 
-  return availability
-})
-
-// Basic availability for simple demos
-const dynamicBasicAvailability = computed((): DateAvailability[] => {
-  const availability: DateAvailability[] = []
-
-  // Generate simpler pattern for basic demo
-  for (let i = 1; i <= 60; i++) {
-    const date = getDateDaysFromNow(i)
-    const dateString = formatDateToString(date)
-
-    // Simple patterns
-    const isBlocked = i % 12 === 0 || i % 17 === 0
-    const isCheckoutOnly = (i + 1) % 12 === 0 || (i + 1) % 17 === 0
-
-    if (isBlocked) {
-      availability.push({
-        date: dateString,
-        status: 'blocked'
-      })
-    } else if (isCheckoutOnly) {
-      availability.push({
-        date: dateString,
-        status: 'checkout-only'
-      })
-    }
-    // Don't add available dates - they'll be default
+// Event handlers for guest calendar
+const handleSelectionError = (error: SelectionError | null) => {
+  if (error) {
+    console.log('Selection error:', error)
   }
-
-  return availability
-})
-
-// Event handlers
-const onDateClick = (date: string, status: AvailabilityStatus) => {
-  console.log('Date clicked:', date, 'Status:', status)
 }
 
-const onSelectionChange = (newSelection: { checkIn?: string | null; checkOut?: string | null }) => {
-  console.log('Selection changed:', newSelection)
-}
-
-const onPriceCalculation = (calculation: PriceCalculation | null) => {
-  currentPriceCalculation.value = calculation
+const handlePriceCalculation = (calculation: PriceCalculation | null) => {
   console.log('Price calculation:', calculation)
 }
 
-const onSelectionError = (error: SelectionError) => {
-  lastSelectionError.value = error
-  console.log('Selection error:', error)
+const handleBookNow = (data: { selection: DateRange; calculation: PriceCalculation }) => {
+  console.log('Book now clicked:', data)
+  alert(`Booking request for ${data.calculation.nights} nights - Total: ${formatCurrency(data.calculation.totalPrice)}`)
 }
 
-const onBookNow = (booking: { selection: { checkIn: string | null; checkOut: string | null }; calculation: PriceCalculation }) => {
-  lastBooking.value = booking
-  console.log('Book Now event:', booking)
+// Event handlers for dashboard calendar
+const handleBookingClick = (booking: Booking) => {
+  console.log('Booking clicked:', booking)
+  const nights = Math.ceil((new Date(booking.checkOut).getTime() - new Date(booking.checkIn).getTime()) / (1000 * 60 * 60 * 24))
+  alert(`Booking Details:\n\nGuest: ${booking.guestName}\nRoom: ${booking.roomNumber}\nStatus: ${booking.status}\nNights: ${nights}\n\n(Parent component would show detailed modal here)`)
 }
 
-// Helper functions for display
-const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(price)
+const handleBookingCreate = (data: { roomId: string; date: string }) => {
+  console.log('Create booking:', data)
+  const room = sampleRooms.value.find(r => r.id === data.roomId)
+  alert(`Create new booking:\nRoom: ${room?.number}\nDate: ${formatDate(new Date(data.date))}\n\n(Parent component would show booking form here)`)
 }
 
-const formatPriceGBP = (price: number): string => {
+// Utility functions
+const formatDate = (date: Date): string => {
+  return new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }).format(date)
+}
+
+const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',
     currency: 'GBP'
-  }).format(price)
-}
-
-const formatBlockedDates = (dates: string[]): string => {
-  return dates.map(dateStr => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }).join(', ')
+  }).format(amount)
 }
 </script>
 
 <style>
-#app {
+body {
+  margin: 0;
+  padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  background: #ffffff;
+  color: #2c3e50;
+}
+
+#app {
   min-height: 100vh;
-  padding: 20px;
+  padding: 40px 20px;
 }
 
 .demo-container {
   max-width: 1200px;
   margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid #f1f3f4;
 }
 
 h1 {
   text-align: center;
-  color: #2d3748;
-  margin-bottom: 1rem;
-  font-size: 2.5rem;
-  background: linear-gradient(45deg, #4f46e5, #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #1a202c;
+  font-size: 36px;
+  font-weight: 600;
+  margin: 0;
+  padding: 60px 40px 20px;
+  background: white;
+  border-bottom: 1px solid #f1f3f4;
+  letter-spacing: -0.02em;
 }
 
 .version-badge {
-  display: inline-block;
-  background-color: #4f46e5;
-  color: white;
-  padding: 0.5rem 1rem;
+  text-align: center;
+  margin: 0 0 30px;
+  padding: 0 40px 30px;
+  background: white;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.version-tag {
+  background: #f8f9fa;
+  color: #495057;
+  padding: 6px 16px;
   border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #e9ecef;
+  display: inline-block;
+}
+
+.version-label {
+  color: #6c757d;
+  font-size: 11px;
+  margin-left: 8px;
 }
 
 .demo-intro {
   text-align: center;
-  color: #6b7280;
-  margin-bottom: 3rem;
-  font-size: 1.1rem;
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
+  color: #495057;
+  font-size: 18px;
   line-height: 1.6;
+  margin: 0;
+  padding: 40px 40px 50px;
+  background: white;
+  font-weight: 400;
 }
 
 .demo-section {
-  margin-bottom: 3rem;
+  padding: 50px 40px;
+  border-bottom: 1px solid #f1f3f4;
   background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.demo-section:last-child {
+  border-bottom: none;
 }
 
 .demo-section h2 {
-  margin-top: 0;
-  color: #374151;
-  border-bottom: 2px solid #e5e7eb;
-  padding-bottom: 0.5rem;
-  font-size: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  color: #1a202c;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.01em;
 }
 
 .demo-description {
-  color: #6b7280;
-  font-size: 0.95rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.6;
-  padding: 1rem;
-  background: #f8fafc;
-  border-radius: 8px;
-  border-left: 4px solid #3b82f6;
+  color: #495057;
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 0 0 40px 0;
+  font-weight: 400;
 }
 
-.price-info,
-.error-info {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-}
-
-.price-info {
-  border-color: #10b981;
-  background: #ecfdf5;
-}
-
-.error-info {
-  border-color: #ef4444;
-  background: #fef2f2;
-}
-
-.price-info h4,
-.error-info h4 {
-  margin: 0 0 0.5rem 0;
-  color: #374151;
-}
-
-.price-info p,
-.error-info p {
-  margin: 0.25rem 0;
-  font-size: 0.9rem;
-}
-
-.blocked-dates {
-  color: #dc2626 !important;
-  font-weight: 500;
-}
-
-.booking-info {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
-}
-
-.booking-note {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.selection-info {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  padding: 2rem;
-  border-radius: 12px;
-  border: 1px solid #a7f3d0;
-  margin-top: 2rem;
-}
-
-.selection-info h3 {
-  margin-top: 0;
-  color: #065f46;
-  text-align: center;
-  font-size: 1.25rem;
-}
-
-.selections-grid {
+.features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1rem;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  margin-top: 30px;
 }
 
-.selection-item {
-  background: white;
-  padding: 1.25rem;
+.feature-card {
+  background: #fdfdfd;
   border-radius: 8px;
-  border: 1px solid #d1d5db;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  border: 1px solid #f1f3f4;
+  transition: all 0.2s ease;
 }
 
-.selection-item h4 {
-  margin: 0 0 0.75rem 0;
-  color: #374151;
-  font-size: 1rem;
+.feature-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: #e9ecef;
+}
+
+.feature-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  color: #1a202c;
   font-weight: 600;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 0.5rem;
 }
 
-.selection-item p {
-  margin: 0.5rem 0;
-  color: #6b7280;
-  font-size: 0.9rem;
+.feature-card p {
+  margin: 0;
+  color: #495057;
+  line-height: 1.6;
+  font-weight: 400;
 }
 
-.selection-item p strong {
-  color: #374151;
-}
-
-.feature-badge {
-  position: absolute;
-  top: -10px;
-  left: 10px;
-  background-color: #4f46e5;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  z-index: 1;
-}
-
-/* Responsive design */
 @media (max-width: 768px) {
-  .demo-container {
-    padding: 0 10px;
+  #app {
+    padding: 20px 10px;
   }
 
-  .demo-section {
-    padding: 1.5rem;
+  .demo-container {
+    border-radius: 8px;
   }
 
   h1 {
-    font-size: 2rem;
+    font-size: 28px;
+    padding: 40px 20px 15px;
   }
 
-  .selections-grid {
+  .demo-intro {
+    padding: 30px 20px 40px;
+    font-size: 16px;
+  }
+
+  .demo-section {
+    padding: 40px 20px;
+  }
+
+  .demo-section h2 {
+    font-size: 24px;
+  }
+
+  .features-grid {
     grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .feature-card {
+    padding: 24px;
   }
 }
 </style>
