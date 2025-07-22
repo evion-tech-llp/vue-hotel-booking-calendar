@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
         dts({
           insertTypesEntry: true,
           copyDtsFiles: false,
+          rollupTypes: true
         }),
       ],
       build: {
