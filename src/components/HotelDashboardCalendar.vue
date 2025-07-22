@@ -276,9 +276,10 @@ watch(() => props.selectedMonth, (newMonth) => {
 .hotel-dashboard-calendar {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: white;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    border: 1px solid #f1f3f4;
     overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .theme-dark {
@@ -292,9 +293,9 @@ watch(() => props.selectedMonth, (newMonth) => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    background: #f8f9fa;
-    border-bottom: 1px solid #e0e0e0;
+    padding: 20px 24px;
+    background: white;
+    border-bottom: 1px solid #f1f3f4;
 }
 
 .theme-dark .dashboard-header {
@@ -303,17 +304,20 @@ watch(() => props.selectedMonth, (newMonth) => {
 }
 
 .nav-btn {
-    padding: 8px 16px;
-    border: 1px solid #ddd;
+    padding: 10px 18px;
+    border: 1px solid #e9ecef;
     background: white;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
-    transition: background-color 0.2s;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    color: #495057;
 }
 
 .nav-btn:hover {
-    background: #f5f5f5;
+    background: #f8f9fa;
+    border-color: #dee2e6;
 }
 
 .theme-dark .nav-btn {
@@ -330,6 +334,12 @@ watch(() => props.selectedMonth, (newMonth) => {
     font-size: 20px;
     font-weight: 600;
     margin: 0;
+    color: #1a202c;
+    letter-spacing: -0.01em;
+}
+
+.theme-dark .current-month {
+    color: white;
 }
 
 /* Calendar Container */
@@ -356,30 +366,32 @@ watch(() => props.selectedMonth, (newMonth) => {
 }
 
 .room-header {
-    padding: 12px 8px;
+    padding: 16px 8px;
     font-weight: 600;
-    border-right: 1px solid #e0e0e0;
-    border-bottom: 1px solid #e0e0e0;
-    background: #f8f9fa;
-    font-size: 12px;
+    border-right: 1px solid #f1f3f4;
+    border-bottom: 1px solid #f1f3f4;
+    background: white;
+    font-size: 13px;
     text-align: center;
     position: sticky;
     top: 0;
     z-index: 11;
+    color: #495057;
 }
 
 .theme-dark .room-header {
     background: #2d2d2d;
     border-color: #444;
+    color: #ccc;
 }
 
 .date-header {
-    padding: 6px 2px;
+    padding: 8px 2px;
     text-align: center;
-    border-right: 1px solid #e0e0e0;
-    border-bottom: 1px solid #e0e0e0;
-    font-size: 10px;
-    background: #f8f9fa;
+    border-right: 1px solid #f1f3f4;
+    border-bottom: 1px solid #f1f3f4;
+    font-size: 11px;
+    background: white;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -391,16 +403,18 @@ watch(() => props.selectedMonth, (newMonth) => {
 }
 
 .date-header.is-today {
-    background: #e3f2fd;
+    background: #f0f8ff;
     font-weight: 600;
+    color: #2563eb;
 }
 
 .theme-dark .date-header.is-today {
     background: #1e3a8a;
+    color: white;
 }
 
 .date-header.is-weekend {
-    background: #fff3e0;
+    background: #fafafa;
 }
 
 .theme-dark .date-header.is-weekend {
@@ -410,14 +424,15 @@ watch(() => props.selectedMonth, (newMonth) => {
 .date-number {
     font-weight: 600;
     line-height: 1;
-    font-size: 11px;
+    font-size: 12px;
 }
 
 .date-weekday {
-    font-size: 8px;
-    color: #666;
+    font-size: 9px;
+    color: #6c757d;
     line-height: 1;
-    margin-top: 1px;
+    margin-top: 2px;
+    text-transform: uppercase;
 }
 
 .theme-dark .date-weekday {
@@ -431,16 +446,17 @@ watch(() => props.selectedMonth, (newMonth) => {
 }
 
 .room-name {
-    padding: 8px 4px;
+    padding: 12px 6px;
     font-weight: 600;
-    border-right: 1px solid #e0e0e0;
-    border-bottom: 1px solid #e0e0e0;
+    border-right: 1px solid #f1f3f4;
+    border-bottom: 1px solid #f1f3f4;
     background: white;
-    font-size: 12px;
+    font-size: 13px;
     text-align: center;
     position: sticky;
     left: 0;
     z-index: 5;
+    color: #495057;
 }
 
 .room-name:hover {
@@ -450,6 +466,7 @@ watch(() => props.selectedMonth, (newMonth) => {
 .theme-dark .room-name {
     background: #1e1e1e;
     border-color: #444;
+    color: #ccc;
 }
 
 .theme-dark .room-name:hover {
@@ -458,26 +475,28 @@ watch(() => props.selectedMonth, (newMonth) => {
 
 .date-cell {
     padding: 0;
-    border-right: 1px solid #e0e0e0;
-    border-bottom: 1px solid #e0e0e0;
-    height: 35px;
+    border-right: 1px solid #f1f3f4;
+    border-bottom: 1px solid #f1f3f4;
+    height: 38px;
     cursor: pointer;
     position: relative;
-    transition: opacity 0.2s;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     min-width: 0;
     /* Allow shrinking */
+    background: white;
 }
 
 .theme-dark .date-cell {
     border-color: #444;
+    background: #1e1e1e;
 }
 
 .date-cell:hover {
-    opacity: 0.8;
-    background: rgba(0, 0, 0, 0.05);
+    background: #f8f9fa;
+    transform: scale(1.02);
 }
 
 .theme-dark .date-cell:hover {
@@ -486,6 +505,11 @@ watch(() => props.selectedMonth, (newMonth) => {
 
 .date-cell.is-today {
     border-left: 3px solid #2563eb;
+    background: #f0f8ff;
+}
+
+.theme-dark .date-cell.is-today {
+    background: #1e3a8a;
 }
 
 .booking-indicator {
@@ -497,20 +521,22 @@ watch(() => props.selectedMonth, (newMonth) => {
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 2px;
 }
 
 .guest-initials {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 /* Legend */
 .legend {
     display: flex;
-    gap: 16px;
-    padding: 16px 20px;
-    background: #f8f9fa;
-    border-top: 1px solid #e0e0e0;
+    gap: 20px;
+    padding: 20px 24px;
+    background: white;
+    border-top: 1px solid #f1f3f4;
     flex-wrap: wrap;
 }
 
@@ -522,30 +548,37 @@ watch(() => props.selectedMonth, (newMonth) => {
 .legend-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
+    gap: 8px;
+    font-size: 13px;
+    color: #495057;
+    font-weight: 500;
+}
+
+.theme-dark .legend-item {
+    color: #ccc;
 }
 
 .legend-color {
-    width: 16px;
-    height: 16px;
-    border-radius: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
     border: 1px solid;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-header {
-        padding: 12px 16px;
+        padding: 16px 20px;
     }
 
     .nav-btn {
-        padding: 6px 12px;
-        font-size: 12px;
+        padding: 8px 14px;
+        font-size: 13px;
     }
 
     .current-month {
-        font-size: 16px;
+        font-size: 18px;
     }
 
     .calendar-grid {
@@ -554,34 +587,38 @@ watch(() => props.selectedMonth, (newMonth) => {
 
     .room-header,
     .room-name {
-        padding: 6px 2px;
-        font-size: 10px;
+        padding: 8px 2px;
+        font-size: 11px;
     }
 
     .date-header {
-        padding: 4px 1px;
-        font-size: 9px;
+        padding: 6px 1px;
+        font-size: 10px;
     }
 
     .date-number {
-        font-size: 9px;
+        font-size: 10px;
     }
 
     .date-weekday {
-        font-size: 7px;
+        font-size: 8px;
     }
 
     .date-cell {
-        height: 30px;
+        height: 34px;
     }
 
     .legend {
-        padding: 12px 16px;
-        gap: 12px;
+        padding: 16px 20px;
+        gap: 16px;
+    }
+
+    .legend-item {
+        font-size: 12px;
     }
 
     .guest-initials {
-        font-size: 8px;
+        font-size: 9px;
     }
 }
 </style>
