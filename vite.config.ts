@@ -39,5 +39,7 @@ export default defineConfig(({ mode }) => {
         '@': resolve(__dirname, 'src'),
       },
     },
+    // Add base path for GitHub Pages
+    base: process.env.NODE_ENV === 'production' ? '/vue-hotel-booking-calendar/' : '/',
   }
 }) 

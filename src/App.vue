@@ -2,105 +2,130 @@
   <div id="app">
     <div class="demo-container">
       <h1>Vue Hotel Booking Calendar Demo</h1>
-      
+      <p class="demo-intro">
+        Interactive demo showcasing all features including price calculation, error handling, and different availability
+        states.
+        <br><strong>All dates are dynamically generated</strong> relative to today ({{ formatDate(today) }}) so the demo
+        stays current!
+      </p>
+
       <div class="demo-section">
-        <h2>Basic Usage</h2>
+        <h2>🏷️ Price Calculation & Booking Summary</h2>
+        <p class="demo-description">
+          Enhanced calendar with full price calculation, booking summary, and currency formatting.
+          Select dates to see total pricing with daily breakdown. Base price: $150/night.
+        </p>
+        <HotelBookingCalendar v-model="priceSelection" :availability-data="dynamicAvailabilityWithPrices"
+          :show-prices="false" :show-price-calculation="true" :base-price="150" currency="USD"
+          @selection-change="onSelectionChange" @price-calculation="onPriceCalculation" />
+        <div v-if="currentPriceCalculation" class="price-info">
+          <h4>💰 Live Price Calculation:</h4>
+          <p><strong>Nights:</strong> {{ currentPriceCalculation.nights }}</p>
+          <p><strong>Total:</strong> {{ formatPrice(currentPriceCalculation.totalPrice) }}</p>
+          <p><strong>Average per night:</strong> {{ formatPrice(currentPriceCalculation.averagePerNight) }}</p>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>⚠️ Selection Error Handling</h2>
+        <p class="demo-description">
+          Demonstrates error handling when selecting ranges with blocked dates.
+          Try selecting a range that includes red (blocked) dates - you'll see helpful error messages.
+          <strong>Tip:</strong> Try selecting from {{ formatDateShort(getDateDaysFromNow(5)) }} to {{
+            formatDateShort(getDateDaysFromNow(12)) }} to see the error in action.
+        </p>
+        <HotelBookingCalendar v-model="errorSelection" :availability-data="dynamicAvailabilityWithBlockedRanges"
+          :show-prices="true" :show-price-calculation="true" :show-selection-errors="true" :base-price="120"
+          currency="EUR" @selection-error="onSelectionError" @price-calculation="onPriceCalculation" />
+        <div v-if="lastSelectionError" class="error-info">
+          <h4>🚨 Last Selection Error:</h4>
+          <p><strong>Type:</strong> {{ lastSelectionError.type }}</p>
+          <p><strong>Message:</strong> {{ lastSelectionError.message }}</p>
+          <p v-if="lastSelectionError.blockedDates" class="blocked-dates">
+            <strong>Blocked dates:</strong> {{ formatBlockedDates(lastSelectionError.blockedDates) }}
+          </p>
+        </div>
+      </div>
+
+      <div class="demo-section">
+        <h2>🌙 Dark Theme with Pricing</h2>
+        <p class="demo-description">
+          Dark theme version with all features enabled. Perfect for dark mode applications.
+          Base price: ¥15,000/night with Japanese Yen formatting.
+        </p>
+        <HotelBookingCalendar v-model="darkSelection" :availability-data="dynamicAvailabilityWithPrices" theme="dark"
+          :show-prices="true" :show-price-calculation="true" :base-price="15000" currency="JPY" locale="ja-JP" />
+      </div>
+
+      <div class="demo-section">
+        <h2>📅 Basic Usage</h2>
         <p class="demo-description">
           Simple calendar showing availability states. Green = available, Red = blocked, Half-colors = checkout-only.
           Try selecting a date range - blocked dates will prevent selection.
         </p>
-        <HotelBookingCalendar
-          v-model="selection"
-          :availability-data="sampleAvailability"
-          @date-click="onDateClick"
-          @selection-change="onSelectionChange"
-        />
+        <HotelBookingCalendar v-model="selection" :availability-data="dynamicBasicAvailability"
+          @date-click="onDateClick" @selection-change="onSelectionChange" />
       </div>
 
       <div class="demo-section">
-        <h2>With Price Display</h2>
+        <h2>💵 Different Currencies & Locales</h2>
         <p class="demo-description">
-          Calendar with price display enabled. Available dates show dynamic pricing based on demand.
+          Showcase different currency formatting and locales. This example uses British Pounds with UK locale.
         </p>
-        <HotelBookingCalendar
-          v-model="selection2"
-          :availability-data="sampleAvailabilityWithPrices"
-          :show-prices="true"
-          @selection-change="onSelectionChange"
-        />
+        <HotelBookingCalendar v-model="currencySelection" :availability-data="dynamicAvailabilityWithPrices"
+          :show-prices="true" :show-price-calculation="true" :base-price="85" currency="GBP" locale="en-GB" />
       </div>
 
       <div class="demo-section">
-        <h2>Dark Theme</h2>
+        <h2>📍 Custom Date Range</h2>
         <p class="demo-description">
-          Same functionality with dark theme for better integration with dark UIs.
+          Calendar with custom min/max dates. Range: {{ formatDateShort(getDateMonthsFromNow(1)) }} to {{
+            formatDateShort(getDateMonthsFromNow(4)) }}
         </p>
-        <HotelBookingCalendar
-          v-model="selection3"
-          :availability-data="sampleAvailabilityWithPrices"
-          theme="dark"
-          :show-prices="true"
-        />
+        <HotelBookingCalendar v-model="selection4" :availability-data="dynamicBasicAvailability"
+          :min-date="getDateMonthsFromNow(1)" :max-date="getDateMonthsFromNow(4)" :disable-past-dates="false" />
       </div>
 
       <div class="demo-section">
-        <h2>Custom Date Range</h2>
-        <p class="demo-description">
-          Calendar with custom min/max dates and past dates enabled for testing.
-        </p>
-        <HotelBookingCalendar
-          v-model="selection4"
-          :availability-data="sampleAvailability"
-          min-date="2025-06-01"
-          max-date="2025-09-30"
-          :disable-past-dates="false"
-        />
-      </div>
-
-      <div class="demo-section">
-        <h2>Single Day Selection</h2>
+        <h2>📋 Single Day Selection</h2>
         <p class="demo-description">
           Calendar allowing single day selections (same check-in and check-out date).
         </p>
-        <HotelBookingCalendar
-          v-model="selection5"
-          :availability-data="sampleAvailability"
-          :allow-single-day="true"
-          :show-prices="true"
-        />
+        <HotelBookingCalendar v-model="selection5" :availability-data="dynamicBasicAvailability"
+          :allow-single-day="true" :show-prices="true" />
       </div>
 
       <div class="selection-info">
-        <h3>Selection States:</h3>
+        <h3>📊 Current Selection States:</h3>
         <div class="selections-grid">
+          <div class="selection-item">
+            <h4>Price Calculation:</h4>
+            <p><strong>Check-in:</strong> {{ priceSelection.checkIn || 'Not selected' }}</p>
+            <p><strong>Check-out:</strong> {{ priceSelection.checkOut || 'Not selected' }}</p>
+          </div>
+
+          <div class="selection-item">
+            <h4>Error Handling:</h4>
+            <p><strong>Check-in:</strong> {{ errorSelection.checkIn || 'Not selected' }}</p>
+            <p><strong>Check-out:</strong> {{ errorSelection.checkOut || 'Not selected' }}</p>
+          </div>
+
+          <div class="selection-item">
+            <h4>Dark Theme:</h4>
+            <p><strong>Check-in:</strong> {{ darkSelection.checkIn || 'Not selected' }}</p>
+            <p><strong>Check-out:</strong> {{ darkSelection.checkOut || 'Not selected' }}</p>
+          </div>
+
+          <div class="selection-item">
+            <h4>Currency Demo:</h4>
+            <p><strong>Check-in:</strong> {{ currencySelection.checkIn || 'Not selected' }}</p>
+            <p><strong>Check-out:</strong> {{ currencySelection.checkOut || 'Not selected' }}</p>
+          </div>
+
           <div class="selection-item">
             <h4>Basic Calendar:</h4>
             <p><strong>Check-in:</strong> {{ selection.checkIn || 'Not selected' }}</p>
             <p><strong>Check-out:</strong> {{ selection.checkOut || 'Not selected' }}</p>
-          </div>
-          
-          <div class="selection-item">
-            <h4>With Prices:</h4>
-            <p><strong>Check-in:</strong> {{ selection2.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ selection2.checkOut || 'Not selected' }}</p>
-          </div>
-          
-          <div class="selection-item">
-            <h4>Dark Theme:</h4>
-            <p><strong>Check-in:</strong> {{ selection3.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ selection3.checkOut || 'Not selected' }}</p>
-          </div>
-          
-          <div class="selection-item">
-            <h4>Custom Range:</h4>
-            <p><strong>Check-in:</strong> {{ selection4.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ selection4.checkOut || 'Not selected' }}</p>
-          </div>
-
-          <div class="selection-item">
-            <h4>Single Day:</h4>
-            <p><strong>Check-in:</strong> {{ selection5.checkIn || 'Not selected' }}</p>
-            <p><strong>Check-out:</strong> {{ selection5.checkOut || 'Not selected' }}</p>
           </div>
         </div>
       </div>
@@ -109,22 +134,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import HotelBookingCalendar from './components/HotelBookingCalendar.vue'
-import type { DateAvailability, AvailabilityStatus } from './types'
+import type { DateAvailability, AvailabilityStatus, SelectionError, PriceCalculation } from './types'
 
-// Demo data
+// Get current date for dynamic date generation
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+
+// Demo data - New selections for enhanced features
+const priceSelection = ref({
+  checkIn: null as string | null,
+  checkOut: null as string | null
+})
+
+const errorSelection = ref({
+  checkIn: null as string | null,
+  checkOut: null as string | null
+})
+
+const darkSelection = ref({
+  checkIn: null as string | null,
+  checkOut: null as string | null
+})
+
+const currencySelection = ref({
+  checkIn: null as string | null,
+  checkOut: null as string | null
+})
+
+// Existing selections
 const selection = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-const selection2 = ref({
-  checkIn: null as string | null,
-  checkOut: null as string | null
-})
-
-const selection3 = ref({
   checkIn: null as string | null,
   checkOut: null as string | null
 })
@@ -139,66 +179,182 @@ const selection5 = ref({
   checkOut: null as string | null
 })
 
-// Sample availability data for demonstration
-// Only specify booked/checkout-only dates - all other dates will be available (green) by default
-const sampleAvailability: DateAvailability[] = [
-  // Current month (July 2025) bookings
-  { date: '2025-07-15', status: 'blocked' },
-  { date: '2025-07-16', status: 'blocked' },
-  { date: '2025-07-17', status: 'checkout-only' },
-  { date: '2025-07-22', status: 'blocked' },
-  { date: '2025-07-23', status: 'blocked' },
-  { date: '2025-07-24', status: 'blocked' },
-  { date: '2025-07-25', status: 'checkout-only' },
-  { date: '2025-07-28', status: 'blocked' },
-  { date: '2025-07-29', status: 'checkout-only' },
-  
-  // Next month (August 2025) bookings
-  { date: '2025-08-03', status: 'blocked' },
-  { date: '2025-08-04', status: 'blocked' },
-  { date: '2025-08-05', status: 'checkout-only' },
-  { date: '2025-08-12', status: 'blocked' },
-  { date: '2025-08-13', status: 'blocked' },
-  { date: '2025-08-14', status: 'blocked' },
-  { date: '2025-08-15', status: 'checkout-only' },
-  { date: '2025-08-20', status: 'blocked' },
-  { date: '2025-08-21', status: 'checkout-only' },
-  
-  // Previous month (June 2025) for testing navigation
-  { date: '2025-06-28', status: 'blocked' },
-  { date: '2025-06-29', status: 'checkout-only' },
-  { date: '2025-06-30', status: 'blocked' },
-]
+// Event data
+const currentPriceCalculation = ref<PriceCalculation | null>(null)
+const lastSelectionError = ref<SelectionError | null>(null)
 
-// Sample data with prices for price display demo
-const sampleAvailabilityWithPrices: DateAvailability[] = [
-  // Blocked dates (no prices needed)
-  { date: '2025-07-15', status: 'blocked' },
-  { date: '2025-07-16', status: 'blocked' },
-  { date: '2025-07-22', status: 'blocked' },
-  { date: '2025-07-23', status: 'blocked' },
-  { date: '2025-07-24', status: 'blocked' },
-  { date: '2025-07-28', status: 'blocked' },
-  
-  // Checkout-only with prices
-  { date: '2025-07-17', status: 'checkout-only', price: 89 },
-  { date: '2025-07-25', status: 'checkout-only', price: 129 },
-  { date: '2025-07-29', status: 'checkout-only', price: 109 },
-  
-  // Available dates with varying prices (optional - shows on hover/selection)
-  { date: '2025-07-01', status: 'available', price: 120 },
-  { date: '2025-07-02', status: 'available', price: 120 },
-  { date: '2025-07-05', status: 'available', price: 150 }, // Weekend
-  { date: '2025-07-06', status: 'available', price: 150 }, // Weekend
-  { date: '2025-07-12', status: 'available', price: 180 }, // Weekend premium
-  { date: '2025-07-13', status: 'available', price: 180 }, // Weekend premium
-  { date: '2025-07-19', status: 'available', price: 200 }, // Peak weekend
-  { date: '2025-07-20', status: 'available', price: 200 }, // Peak weekend
-  { date: '2025-07-26', status: 'available', price: 165 }, // Weekend
-  { date: '2025-07-27', status: 'available', price: 165 }, // Weekend
-]
+// Helper functions for dynamic date generation
+const getDateDaysFromNow = (days: number): Date => {
+  const date = new Date(today)
+  date.setDate(date.getDate() + days)
+  return date
+}
 
-// Event handlers for demo
+const getDateMonthsFromNow = (months: number): Date => {
+  const date = new Date(today)
+  date.setMonth(date.getMonth() + months)
+  return date
+}
+
+const formatDateToString = (date: Date): string => {
+  return date.toISOString().split('T')[0]
+}
+
+const formatDate = (date: Date): string => {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+const formatDateShort = (date: Date): string => {
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
+// Dynamic availability data generation
+const dynamicAvailabilityWithPrices = computed((): DateAvailability[] => {
+  const availability: DateAvailability[] = []
+
+  // Generate data for next 90 days
+  for (let i = 1; i <= 90; i++) {
+    const date = getDateDaysFromNow(i)
+    const dateString = formatDateToString(date)
+    const dayOfWeek = date.getDay()
+
+    // Create patterns for blocked dates (every 8-10 days with some randomness)
+    const isBlocked = i % 9 === 0 || i % 13 === 0 || i === 15 || i === 16 || i === 22 || i === 28
+
+    // Checkout-only dates (day after some blocked periods)
+    const isCheckoutOnly = i === 17 || i === 25 || i === 35 || i === 45
+
+    if (isBlocked) {
+      availability.push({
+        date: dateString,
+        status: 'blocked'
+      })
+    } else if (isCheckoutOnly) {
+      availability.push({
+        date: dateString,
+        status: 'checkout-only',
+        price: 89 + Math.floor(Math.random() * 40) // Random price between 89-129
+      })
+    } else {
+      // Calculate dynamic pricing based on patterns
+      let basePrice = 120
+
+      // Weekend premium (Friday, Saturday, Sunday)
+      if (dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0) {
+        basePrice += 60
+      }
+
+      // Month-based seasonal pricing
+      const month = date.getMonth()
+      if (month >= 5 && month <= 7) { // Summer months (Jun, Jul, Aug)
+        basePrice += 30
+      } else if (month === 11 || month === 0) { // Holiday season (Dec, Jan)
+        basePrice += 50
+      }
+
+      // Add some randomness
+      basePrice += Math.floor(Math.random() * 30) - 15
+
+      availability.push({
+        date: dateString,
+        status: 'available',
+        price: Math.max(basePrice, 90) // Minimum price of 90
+      })
+    }
+  }
+
+  return availability
+})
+
+// Availability data specifically designed for error testing
+const dynamicAvailabilityWithBlockedRanges = computed((): DateAvailability[] => {
+  const availability: DateAvailability[] = []
+
+  // Generate data for next 60 days with specific blocked patterns
+  for (let i = 1; i <= 60; i++) {
+    const date = getDateDaysFromNow(i)
+    const dateString = formatDateToString(date)
+    const dayOfWeek = date.getDay()
+
+    // Create specific blocked ranges for error testing
+    const isBlocked =
+      (i >= 7 && i <= 10) || // Block days 7-10 for error testing
+      (i >= 18 && i <= 20) || // Block days 18-20
+      i === 25 || i === 32 || i === 38
+
+    const isCheckoutOnly = i === 11 || i === 21 || i === 30
+
+    if (isBlocked) {
+      availability.push({
+        date: dateString,
+        status: 'blocked'
+      })
+    } else if (isCheckoutOnly) {
+      availability.push({
+        date: dateString,
+        status: 'checkout-only',
+        price: 95 + Math.floor(Math.random() * 30)
+      })
+    } else {
+      // Pricing logic
+      let basePrice = 110
+
+      if (dayOfWeek === 5 || dayOfWeek === 6) {
+        basePrice += 40
+      }
+
+      basePrice += Math.floor(Math.random() * 25) - 10
+
+      availability.push({
+        date: dateString,
+        status: 'available',
+        price: Math.max(basePrice, 80)
+      })
+    }
+  }
+
+  return availability
+})
+
+// Basic availability for simple demos
+const dynamicBasicAvailability = computed((): DateAvailability[] => {
+  const availability: DateAvailability[] = []
+
+  // Generate simpler pattern for basic demo
+  for (let i = 1; i <= 60; i++) {
+    const date = getDateDaysFromNow(i)
+    const dateString = formatDateToString(date)
+
+    // Simple patterns
+    const isBlocked = i % 12 === 0 || i % 17 === 0
+    const isCheckoutOnly = (i + 1) % 12 === 0 || (i + 1) % 17 === 0
+
+    if (isBlocked) {
+      availability.push({
+        date: dateString,
+        status: 'blocked'
+      })
+    } else if (isCheckoutOnly) {
+      availability.push({
+        date: dateString,
+        status: 'checkout-only'
+      })
+    }
+    // Don't add available dates - they'll be default
+  }
+
+  return availability
+})
+
+// Event handlers
 const onDateClick = (date: string, status: AvailabilityStatus) => {
   console.log('Date clicked:', date, 'Status:', status)
 }
@@ -206,12 +362,37 @@ const onDateClick = (date: string, status: AvailabilityStatus) => {
 const onSelectionChange = (newSelection: { checkIn?: string | null; checkOut?: string | null }) => {
   console.log('Selection changed:', newSelection)
 }
+
+const onPriceCalculation = (calculation: PriceCalculation | null) => {
+  currentPriceCalculation.value = calculation
+  console.log('Price calculation:', calculation)
+}
+
+const onSelectionError = (error: SelectionError) => {
+  lastSelectionError.value = error
+  console.log('Selection error:', error)
+}
+
+// Helper functions for display
+const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(price)
+}
+
+const formatBlockedDates = (dates: string[]): string => {
+  return dates.map(dateStr => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }).join(', ')
+}
 </script>
 
 <style>
 #app {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   min-height: 100vh;
   padding: 20px;
 }
@@ -224,65 +405,157 @@ const onSelectionChange = (newSelection: { checkIn?: string | null; checkOut?: s
 h1 {
   text-align: center;
   color: #2d3748;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
+  font-size: 2.5rem;
+  background: linear-gradient(45deg, #4f46e5, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.demo-intro {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
 }
 
 .demo-section {
   margin-bottom: 3rem;
   background: white;
   padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .demo-section h2 {
   margin-top: 0;
-  color: #4a5568;
-  border-bottom: 2px solid #e2e8f0;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
   padding-bottom: 0.5rem;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .demo-description {
   color: #6b7280;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   margin-bottom: 1.5rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.price-info,
+.error-info {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+}
+
+.price-info {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.error-info {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.price-info h4,
+.error-info h4 {
+  margin: 0 0 0.5rem 0;
+  color: #374151;
+}
+
+.price-info p,
+.error-info p {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.blocked-dates {
+  color: #dc2626 !important;
+  font-weight: 500;
 }
 
 .selection-info {
-  background: #e6fffa;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #81e6d9;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid #a7f3d0;
+  margin-top: 2rem;
 }
 
 .selection-info h3 {
   margin-top: 0;
-  color: #2d3748;
-}
-
-.selection-info p {
-  margin: 0.5rem 0;
-  color: #4a5568;
+  color: #065f46;
+  text-align: center;
+  font-size: 1.25rem;
 }
 
 .selections-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 .selection-item {
-  background: #f8fafc;
-  padding: 1rem;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  background: white;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .selection-item h4 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.75rem 0;
   color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.selection-item p {
+  margin: 0.5rem 0;
+  color: #6b7280;
   font-size: 0.9rem;
 }
-</style> 
+
+.selection-item p strong {
+  color: #374151;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .demo-container {
+    padding: 0 10px;
+  }
+
+  .demo-section {
+    padding: 1.5rem;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  .selections-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
