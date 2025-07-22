@@ -78,7 +78,7 @@
       <div class="price-content">
         <div class="stay-info">
           <span class="nights">{{ priceCalculation.nights }} night{{ priceCalculation.nights !== 1 ? 's' : '' }}</span>
-          <span class="dates">{{ formatDateRange(modelValue?.checkIn!, modelValue?.checkOut!) }}</span>
+          <span class="dates">{{ modelValue?.checkIn && modelValue?.checkOut ? formatDateRange(modelValue.checkIn, modelValue.checkOut) : '' }}</span>
         </div>
 
         <div v-if="priceCalculation.dailyPrices.length > 1" class="breakdown">
@@ -212,11 +212,11 @@ const calendarDays = computed((): CalendarDay[] => {
   const current = new Date(startDate)
 
   while (current <= endDate) {
-    const dateString = current.toISOString().split('T')[0]
+    const dateString = toDateString(current)
     const day: CalendarDay = {
       date: new Date(current),
       dateString,
-      isToday: dateString === new Date().toISOString().split('T')[0],
+      isToday: dateString === toDateString(new Date()),
       isCurrentMonth: current.getMonth() === month,
       isPreviousMonth: current.getMonth() < month,
       isNextMonth: current.getMonth() > month,
@@ -266,7 +266,7 @@ const priceCalculation = computed((): PriceCalculation | null => {
   const current = new Date(startDate)
 
   while (current < endDate) {
-    const dateString = current.toISOString().split('T')[0]
+    const dateString = toDateString(current)
     const availability = availabilityMap.value.get(dateString)
     const dayPrice = availability?.price || props.basePrice || 85
 
@@ -285,6 +285,14 @@ const priceCalculation = computed((): PriceCalculation | null => {
     averagePerNight: totalPrice / nights
   }
 })
+
+// Utility function to create date strings safely without timezone issues
+const toDateString = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 // Methods
 const formatMonth = (date: Date): string => {
@@ -370,7 +378,7 @@ const getBlockedDatesInRange = (startDate: string, endDate: string): string[] =>
   current.setDate(current.getDate() + 1)
 
   while (current < end) {
-    const dateString = current.toISOString().split('T')[0]
+    const dateString = toDateString(current)
     const availability = availabilityMap.value.get(dateString)
     if (availability?.status === 'blocked') {
       blockedDates.push(dateString)
