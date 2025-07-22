@@ -61,4 +61,6 @@ export interface CalendarEmits {
   // NEW: Price and error events
   'price-calculation': [calculation: PriceCalculation | null]
   'selection-error': [error: SelectionError]
+  // NEW: Book now event - THIS WAS MISSING!
+  'book-now': [booking: { selection: { checkIn: string; checkOut: string }, calculation: PriceCalculation }]
 } 
