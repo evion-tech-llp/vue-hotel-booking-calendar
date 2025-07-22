@@ -98,7 +98,6 @@ const actualHeaderHeight = ref(60) // Default fallback
 onMounted(() => {
     if (calendarHeaderRef.value) {
         actualHeaderHeight.value = calendarHeaderRef.value.getBoundingClientRect().height
-        console.log('📏 Measured header height:', actualHeaderHeight.value)
     }
 })
 
@@ -107,7 +106,6 @@ watch(() => props.selectedMonth, () => {
     setTimeout(() => {
         if (calendarHeaderRef.value) {
             actualHeaderHeight.value = calendarHeaderRef.value.getBoundingClientRect().height
-            console.log('📏 Re-measured header height:', actualHeaderHeight.value)
         }
     }, 50) // Small delay to ensure DOM is updated
 })
@@ -176,7 +174,7 @@ const monthDates = computed(() => {
     const dates = []
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day)
-        // Fix timezone issue: create dateString without timezone conversion
+        // Create dateString safely without timezone conversion
         const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
         dates.push({
@@ -375,42 +373,10 @@ const hasBookingSpan = (room: Room, day: number): boolean => {
         day >= span.startDay && day <= span.endDay
     )
 
-    // Temporary debug for span coverage
-    if (hasSpan && room.number === '101') {
-        console.log(`✅ Day ${day} in room ${room.number} covered by span - hiding individual indicator`)
-    }
-
     return hasSpan
 }
 
-const getSpanStyle = (span: any): Record<string, string> => {
-    const isDark = props.theme === 'dark'
-    const backgroundColor = isDark && span.statusConfig.darkBackgroundColor
-        ? span.statusConfig.darkBackgroundColor
-        : span.statusConfig.backgroundColor
 
-    // Very simple approach: position relative to the date cell area
-    // The room name takes up a fixed width (80px on desktop)
-    const roomColumnWidth = 80 // matches CSS
-    const totalDays = monthDates.value.length
-    const dateColumnWidth = `calc((100% - ${roomColumnWidth}px) / ${totalDays})`
-
-    const left = `calc(${roomColumnWidth}px + (${span.startDay - 1} * ${dateColumnWidth}))`
-    const width = `calc(${span.length} * ${dateColumnWidth})`
-
-    return {
-        backgroundColor,
-        color: span.statusConfig.color,
-        border: `1px solid ${span.statusConfig.color}`,
-        position: 'absolute',
-        left,
-        width,
-        top: '4px',
-        height: '30px',
-        zIndex: '10',
-        borderRadius: '4px'
-    }
-}
 
 const getSpanText = (span: any): string => {
     const nights = calculateNights(span.booking.checkIn, span.booking.checkOut)

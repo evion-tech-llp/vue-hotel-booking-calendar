@@ -77,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import HotelBookingCalendar from './components/HotelBookingCalendar.vue'
 import HotelDashboardCalendar from './components/HotelDashboardCalendar.vue'
 import type {
@@ -87,7 +87,6 @@ import type {
   PriceCalculation,
   Room,
   Booking,
-  BookingStatus,
   StatusConfig
 } from './types'
 
@@ -237,28 +236,25 @@ const customStatusConfig = computed<StatusConfig[]>(() => [
 // Event handlers for guest calendar
 const handleSelectionError = (error: SelectionError | null) => {
   if (error) {
-    console.log('Selection error:', error)
+    // Handle selection error - could show user notification
   }
 }
 
-const handlePriceCalculation = (calculation: PriceCalculation | null) => {
-  console.log('Price calculation:', calculation)
+const handlePriceCalculation = () => {
+  // Handle price calculation updates
 }
 
 const handleBookNow = (data: { selection: DateRange; calculation: PriceCalculation }) => {
-  console.log('Book now clicked:', data)
   alert(`Booking request for ${data.calculation.nights} nights - Total: ${formatCurrency(data.calculation.totalPrice)}`)
 }
 
 // Event handlers for dashboard calendar
 const handleBookingClick = (booking: Booking) => {
-  console.log('Booking clicked:', booking)
   const nights = Math.ceil((new Date(booking.checkOut).getTime() - new Date(booking.checkIn).getTime()) / (1000 * 60 * 60 * 24))
   alert(`Booking Details:\n\nGuest: ${booking.guestName}\nRoom: ${booking.roomNumber}\nStatus: ${booking.status}\nNights: ${nights}\n\n(Parent component would show detailed modal here)`)
 }
 
 const handleBookingCreate = (data: { roomId: string; date: string }) => {
-  console.log('Create booking:', data)
   const room = sampleRooms.value.find(r => r.id === data.roomId)
   alert(`Create new booking:\nRoom: ${room?.number}\nDate: ${formatDate(new Date(data.date))}\n\n(Parent component would show booking form here)`)
 }
