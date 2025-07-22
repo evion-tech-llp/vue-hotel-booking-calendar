@@ -68,55 +68,45 @@
       </div>
     </div>
 
-    <!-- IMPROVED: Price Calculation Display -->
+    <!-- COMPACT: Price Calculation Display -->
     <div v-if="showPriceCalculation && priceCalculation" class="price-summary">
       <div class="price-summary-header">
-        <h3>Booking Summary</h3>
-        <button @click="clearSelection" class="clear-selection" aria-label="Clear selection">
-          <span class="clear-icon">✕</span>
-          Clear
-        </button>
+        <h4>Booking Summary</h4>
+        <button @click="clearSelection" class="clear-btn" aria-label="Clear selection">✕</button>
       </div>
 
-      <div class="price-details">
+      <div class="price-content">
         <div class="stay-info">
-          <div class="stay-duration">
-            <span class="nights-count">{{ priceCalculation.nights }} night{{ priceCalculation.nights !== 1 ? 's' : ''
-              }}</span>
-            <div class="date-range">
-              {{ formatDateRange(modelValue.checkIn!, modelValue.checkOut!) }}
-            </div>
-          </div>
+          <span class="nights">{{ priceCalculation.nights }} night{{ priceCalculation.nights !== 1 ? 's' : '' }}</span>
+          <span class="dates">{{ formatDateRange(modelValue.checkIn!, modelValue.checkOut!) }}</span>
         </div>
 
-        <div class="price-breakdown" v-if="priceCalculation.dailyPrices.length > 1">
+        <div v-if="priceCalculation.dailyPrices.length > 1" class="breakdown">
           <details class="breakdown-toggle">
-            <summary>
-              <span>View price breakdown</span>
-              <span class="breakdown-arrow">▼</span>
-            </summary>
-            <div class="daily-prices">
-              <div v-for="dailyPrice in priceCalculation.dailyPrices" :key="dailyPrice.date" class="daily-price">
-                <span class="daily-date">{{ formatShortDate(dailyPrice.date) }}</span>
-                <span class="daily-amount">{{ formatPrice(dailyPrice.price) }}</span>
+            <summary>Price breakdown <span class="arrow">▼</span></summary>
+            <div class="daily-list">
+              <div v-for="dailyPrice in priceCalculation.dailyPrices" :key="dailyPrice.date" class="daily-row">
+                <span>{{ formatShortDate(dailyPrice.date) }}</span>
+                <span>{{ formatPrice(dailyPrice.price) }}</span>
               </div>
             </div>
           </details>
         </div>
 
-        <div class="price-totals">
+        <div class="totals">
           <div class="subtotal">
-            <div class="subtotal-label">
-              <span>{{ priceCalculation.nights }} night{{ priceCalculation.nights !== 1 ? 's' : '' }} × {{
-                formatPrice(priceCalculation.averagePerNight) }} avg</span>
-            </div>
-            <div class="subtotal-amount">{{ formatPrice(priceCalculation.totalPrice) }}</div>
+            <span>{{ priceCalculation.nights }} × {{ formatPrice(priceCalculation.averagePerNight) }}</span>
+            <span>{{ formatPrice(priceCalculation.totalPrice) }}</span>
           </div>
-          <div class="total-price">
-            <span class="total-label">Total</span>
-            <span class="total-amount">{{ formatPrice(priceCalculation.totalPrice) }}</span>
+          <div class="total">
+            <span>Total</span>
+            <strong>{{ formatPrice(priceCalculation.totalPrice) }}</strong>
           </div>
         </div>
+
+        <button @click="handleBookNow" class="book-btn" :disabled="!priceCalculation">
+          Book Now
+        </button>
       </div>
     </div>
 
@@ -147,13 +137,13 @@ import type { CalendarProps, CalendarEmits, CalendarDay, DateAvailability, Avail
 const props = withDefaults(defineProps<CalendarProps>(), {
   modelValue: () => ({ checkIn: null, checkOut: null }),
   availabilityData: () => ([]),
-  locale: 'en-US',
+  locale: 'en-GB',
   disablePastDates: true,
   showPrices: false,
   allowSingleDay: false,
   theme: 'light',
-  basePrice: 100,
-  currency: 'USD',
+  basePrice: 85,
+  currency: 'GBP',
   showPriceCalculation: true,
   showSelectionErrors: true
 })
@@ -278,7 +268,7 @@ const priceCalculation = computed((): PriceCalculation | null => {
   while (current < endDate) {
     const dateString = current.toISOString().split('T')[0]
     const availability = availabilityMap.value.get(dateString)
-    const dayPrice = availability?.price || props.basePrice || 100
+    const dayPrice = availability?.price || props.basePrice || 85
 
     dailyPrices.push({ date: dateString, price: dayPrice })
     totalPrice += dayPrice
@@ -287,11 +277,11 @@ const priceCalculation = computed((): PriceCalculation | null => {
   }
 
   return {
-    basePrice: props.basePrice || 100,
+    basePrice: props.basePrice || 85,
     nights,
     dailyPrices,
     totalPrice,
-    currency: props.currency || 'USD',
+    currency: props.currency || 'GBP',
     averagePerNight: totalPrice / nights
   }
 })
@@ -307,7 +297,7 @@ const formatMonth = (date: Date): string => {
 const formatPrice = (price: number): string => {
   return new Intl.NumberFormat(props.locale, {
     style: 'currency',
-    currency: props.currency || 'USD'
+    currency: props.currency || 'GBP'
   }).format(price)
 }
 
@@ -442,23 +432,45 @@ const createSelectionError = (type: SelectionError['type'], blockedDates?: strin
   }
 }
 
+const clearSelection = () => {
+  const newValue = { checkIn: null, checkOut: null }
+  emit('update:modelValue', newValue)
+  emit('selection-change', newValue)
+  clearSelectionError()
+  isSelectingRange.value = false
+}
+
+// NEW: Handle Book Now
+const handleBookNow = () => {
+  if (priceCalculation.value && props.modelValue.checkIn && props.modelValue.checkOut) {
+    const booking = {
+      selection: {
+        checkIn: props.modelValue.checkIn,
+        checkOut: props.modelValue.checkOut
+      },
+      calculation: priceCalculation.value
+    }
+    emit('book-now', booking)
+  }
+}
+
+// Enhanced handleDayClick with error handling
 const handleDayClick = (day: CalendarDay) => {
   if (isClickDisabled(day)) return
+
+  clearSelectionError()
 
   const { checkIn, checkOut } = props.modelValue
   const clickedDate = day.dateString
 
   emit('date-click', clickedDate, getEffectiveStatus(day))
 
-  // Handle selection logic
   if (!checkIn || (checkIn && checkOut)) {
-    // Start new selection
     const newValue = { checkIn: clickedDate, checkOut: null }
     emit('update:modelValue', newValue)
     emit('selection-change', newValue)
     isSelectingRange.value = true
   } else if (checkIn && !checkOut) {
-    // Complete the range
     if (clickedDate === checkIn && !props.allowSingleDay) {
       return
     }
@@ -466,11 +478,16 @@ const handleDayClick = (day: CalendarDay) => {
     const startDate = clickedDate < checkIn ? clickedDate : checkIn
     const endDate = clickedDate < checkIn ? checkIn : clickedDate
 
-    // Check if there are blocked dates in between
-    if (getBlockedDatesInRange(startDate, endDate).length > 0) {
-      const error = createSelectionError('blocked-dates-in-range', getBlockedDatesInRange(startDate, endDate))
+    const blockedDates = getBlockedDatesInRange(startDate, endDate)
+    if (blockedDates.length > 0) {
+      const error = createSelectionError('blocked-dates-in-range', blockedDates)
       selectionError.value = error
       emit('selection-error', error)
+
+      const newValue = { checkIn: clickedDate, checkOut: null }
+      emit('update:modelValue', newValue)
+      emit('selection-change', newValue)
+      isSelectingRange.value = true
       return
     }
 
@@ -500,7 +517,7 @@ const nextMonth = () => {
   currentDate.value = newDate
 }
 
-// Initialize calendar to show selected dates
+// Initialize calendar
 onMounted(() => {
   if (props.modelValue.checkIn) {
     const checkInDate = new Date(props.modelValue.checkIn)
@@ -508,7 +525,7 @@ onMounted(() => {
   }
 })
 
-// Watch for external changes to modelValue
+// Watch for changes
 watch(() => props.modelValue, (newValue) => {
   if (newValue.checkIn && !newValue.checkOut) {
     isSelectingRange.value = true
@@ -517,14 +534,9 @@ watch(() => props.modelValue, (newValue) => {
   }
 }, { deep: true })
 
-// NEW: Fixed Clear Selection method
-const clearSelection = () => {
-  const newValue = { checkIn: null, checkOut: null }
-  emit('update:modelValue', newValue)
-  emit('selection-change', newValue)
-  clearSelectionError()
-  isSelectingRange.value = false
-}
+watch(priceCalculation, (newCalculation) => {
+  emit('price-calculation', newCalculation)
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -735,6 +747,314 @@ const clearSelection = () => {
   background: transparent !important;
 }
 
+/* NEW: Selection Error Styles */
+.selection-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  margin: 0 16px 16px;
+  color: #991b1b;
+  animation: slideIn 0.3s ease-out;
+}
+
+.theme-dark .selection-error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.error-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-message {
+  font-weight: 500;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.blocked-dates {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.error-dismiss {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px;
+  color: inherit;
+  opacity: 0.7;
+  border-radius: 2px;
+}
+
+.error-dismiss:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Error blocked dates highlighting */
+.day-cell.error-blocked {
+  background: #fee2e2 !important;
+  border: 2px solid #ef4444 !important;
+  animation: errorPulse 1s ease-in-out;
+}
+
+.theme-dark .day-cell.error-blocked {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: #ef4444 !important;
+}
+
+/* COMPACT: Price Summary Styles */
+.price-summary {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 12px;
+  font-size: 14px;
+}
+
+.theme-dark .price-summary {
+  background: #1f2937;
+  border-color: #374151;
+  color: #f8fafc;
+}
+
+.price-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 8px 8px 0 0;
+}
+
+.theme-dark .price-summary-header {
+  background: #111827;
+  border-color: #374151;
+}
+
+.price-summary-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.theme-dark .price-summary-header h4 {
+  color: #f8fafc;
+}
+
+.clear-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.clear-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.theme-dark .clear-btn {
+  color: #9ca3af;
+}
+
+.theme-dark .clear-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.price-content {
+  padding: 16px;
+}
+
+.stay-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.nights {
+  font-weight: 600;
+  font-size: 16px;
+  color: #111827;
+}
+
+.theme-dark .nights {
+  color: #f8fafc;
+}
+
+.dates {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.theme-dark .dates {
+  color: #9ca3af;
+}
+
+.breakdown {
+  margin-bottom: 12px;
+}
+
+.breakdown-toggle {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.theme-dark .breakdown-toggle {
+  border-color: #4b5563;
+}
+
+.breakdown-toggle summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #3b82f6;
+  background: #f8fafc;
+  border-radius: 6px;
+  list-style: none;
+  user-select: none;
+}
+
+.breakdown-toggle summary::-webkit-details-marker {
+  display: none;
+}
+
+.breakdown-toggle[open] summary {
+  border-radius: 6px 6px 0 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.theme-dark .breakdown-toggle summary {
+  background: #111827;
+  color: #60a5fa;
+}
+
+.theme-dark .breakdown-toggle[open] summary {
+  border-color: #4b5563;
+}
+
+.arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.breakdown-toggle[open] .arrow {
+  transform: rotate(180deg);
+}
+
+.daily-list {
+  padding: 8px 12px;
+  background: #ffffff;
+}
+
+.theme-dark .daily-list {
+  background: #1f2937;
+}
+
+.daily-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  font-size: 13px;
+}
+
+.daily-row:not(:last-child) {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.theme-dark .daily-row:not(:last-child) {
+  border-color: #374151;
+}
+
+.totals {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+  margin-bottom: 16px;
+}
+
+.theme-dark .totals {
+  border-color: #4b5563;
+}
+
+.subtotal {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.theme-dark .subtotal {
+  color: #9ca3af;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 16px;
+}
+
+.total strong {
+  color: #059669;
+  font-size: 18px;
+}
+
+.theme-dark .total strong {
+  color: #10b981;
+}
+
+.book-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.book-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.book-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.theme-dark .book-btn:disabled {
+  background: #4b5563;
+}
+
 .calendar-legend {
   padding: 16px;
   background: #f7fafc;
@@ -828,344 +1148,28 @@ const clearSelection = () => {
   background: transparent !important;
 }
 
-/* NEW: Selection Error Styles */
-.selection-error {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  background-color: #fef3c7;
-  color: #854d0e;
-  border: 1px solid #fcd34d;
-  border-radius: 8px;
-  margin: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.theme-dark .selection-error {
-  background-color: #4b5563;
-  color: #f8fafc;
-  border-color: #374151;
-}
+@keyframes errorPulse {
 
-.error-icon {
-  font-size: 24px;
-  margin-right: 12px;
-}
+  0%,
+  100% {
+    transform: scale(1);
+  }
 
-.error-content {
-  flex-grow: 1;
-}
-
-.error-message {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.blocked-dates {
-  font-size: 0.875em;
-  color: #854d0e;
-}
-
-.error-dismiss {
-  background: none;
-  border: none;
-  font-size: 20px;
-  padding: 4px;
-  border-radius: 50%;
-  cursor: pointer;
-  color: #854d0e;
-  transition: background-color 0.2s;
-}
-
-.theme-dark .error-dismiss {
-  color: #f8fafc;
-}
-
-.error-dismiss:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.theme-dark .error-dismiss:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* IMPROVED: Price Summary Styles */
-.price-summary {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  margin: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.theme-dark .price-summary {
-  background: #1f2937;
-  border-color: #374151;
-  color: #f8fafc;
-}
-
-.price-summary-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.theme-dark .price-summary-header {
-  background: #111827;
-  border-color: #374151;
-}
-
-.price-summary-header h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.theme-dark .price-summary-header h3 {
-  color: #f8fafc;
-}
-
-.clear-selection {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  color: #6b7280;
-  transition: all 0.2s ease;
-}
-
-.clear-selection:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
-  color: #374151;
-}
-
-.theme-dark .clear-selection {
-  background: #374151;
-  border-color: #4b5563;
-  color: #d1d5db;
-}
-
-.theme-dark .clear-selection:hover {
-  background: #4b5563;
-  border-color: #6b7280;
-  color: #f8fafc;
-}
-
-.clear-icon {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-.price-details {
-  padding: 24px;
-}
-
-.stay-info {
-  margin-bottom: 20px;
-}
-
-.nights-count {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.theme-dark .nights-count {
-  color: #f8fafc;
-}
-
-.date-range {
-  color: #6b7280;
-  font-size: 16px;
-  margin-top: 4px;
-  font-weight: 500;
-}
-
-.theme-dark .date-range {
-  color: #9ca3af;
-}
-
-.breakdown-toggle {
-  margin-bottom: 20px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 0;
-}
-
-.theme-dark .breakdown-toggle {
-  border-color: #4b5563;
-}
-
-.breakdown-toggle summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  padding: 12px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #3b82f6;
-  background: #f8fafc;
-  border-radius: 8px;
-  list-style: none;
-  user-select: none;
-}
-
-.breakdown-toggle summary::-webkit-details-marker {
-  display: none;
-}
-
-.breakdown-toggle summary:hover {
-  background: #f1f5f9;
-  color: #1e40af;
-}
-
-.theme-dark .breakdown-toggle summary {
-  background: #111827;
-  color: #60a5fa;
-}
-
-.theme-dark .breakdown-toggle summary:hover {
-  background: #1f2937;
-  color: #93c5fd;
-}
-
-.breakdown-arrow {
-  font-size: 12px;
-  transition: transform 0.2s ease;
-}
-
-.breakdown-toggle[open] .breakdown-arrow {
-  transform: rotate(180deg);
-}
-
-.daily-prices {
-  padding: 16px;
-  background: #ffffff;
-  border-top: 1px solid #e5e7eb;
-}
-
-.theme-dark .daily-prices {
-  background: #1f2937;
-  border-color: #4b5563;
-}
-
-.daily-price {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  font-size: 14px;
-}
-
-.daily-price:not(:last-child) {
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.theme-dark .daily-price:not(:last-child) {
-  border-color: #374151;
-}
-
-.daily-date {
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.theme-dark .daily-date {
-  color: #9ca3af;
-}
-
-.daily-amount {
-  font-weight: 600;
-  color: #111827;
-}
-
-.theme-dark .daily-amount {
-  color: #f8fafc;
-}
-
-.price-totals {
-  border-top: 1px solid #e5e7eb;
-  padding-top: 20px;
-}
-
-.theme-dark .price-totals {
-  border-color: #4b5563;
-}
-
-.subtotal {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding: 12px 0;
-  color: #6b7280;
-  font-size: 15px;
-}
-
-.theme-dark .subtotal {
-  color: #9ca3af;
-}
-
-.subtotal-label {
-  font-weight: 500;
-}
-
-.subtotal-amount {
-  font-weight: 600;
-  color: #374151;
-}
-
-.theme-dark .subtotal-amount {
-  color: #d1d5db;
-}
-
-.total-price {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  border-top: 2px solid #e5e7eb;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  margin: 0 -24px;
-  padding-left: 24px;
-  padding-right: 24px;
-}
-
-.theme-dark .total-price {
-  border-color: #4b5563;
-  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
-}
-
-.total-label {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.theme-dark .total-label {
-  color: #f8fafc;
-}
-
-.total-amount {
-  font-size: 20px;
-  font-weight: 700;
-  color: #059669;
-}
-
-.theme-dark .total-amount {
-  color: #10b981;
+  50% {
+    transform: scale(1.05);
+  }
 }
 </style>
