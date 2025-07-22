@@ -67,9 +67,9 @@ npm install vue-hotel-booking-calendar
 
 ## 🔗 Links
 
-- [Documentation & Examples](https://github.com/evion/vue-hotel-booking-calendar#readme)
-- [npm Package](https://www.npmjs.com/package/vue-hotel-booking-calendar)
-- [GitHub Repository](https://github.com/evion/vue-hotel-booking-calendar)
+- **[npm Package](https://www.npmjs.com/package/vue-hotel-booking-calendar)** - Install now
+- **[Documentation & Examples](https://github.com/evion-tech-llp/vue-hotel-booking-calendar#readme)** - Full guide
+- **[GitHub Repository](https://github.com/evion-tech-llp/vue-hotel-booking-calendar)** - Source code
 
 ---
 

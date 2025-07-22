@@ -44,12 +44,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/evion/vue-hotel-booking-calendar.git"
+    "url": "https://github.com/evion-tech-llp/vue-hotel-booking-calendar.git"
   },
   "bugs": {
-    "url": "https://github.com/evion/vue-hotel-booking-calendar/issues"
+    "url": "https://github.com/evion-tech-llp/vue-hotel-booking-calendar/issues"
   },
-  "homepage": "https://github.com/evion/vue-hotel-booking-calendar#readme",
+  "homepage": "https://github.com/evion-tech-llp/vue-hotel-booking-calendar#readme",
   "peerDependencies": {
     "vue": "^3.0.0"
   },

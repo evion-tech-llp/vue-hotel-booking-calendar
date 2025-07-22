@@ -54,5 +54,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mobile-first responsive approach
 - Performance optimized for large date ranges
 
-[Unreleased]: https://github.com/evion/vue-hotel-booking-calendar/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/evion/vue-hotel-booking-calendar/releases/tag/v1.0.0
+[Unreleased]: https://github.com/evion-tech-llp/vue-hotel-booking-calendar/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/evion-tech-llp/vue-hotel-booking-calendar/releases/tag/v1.0.0

@@ -2,8 +2,9 @@
 
 A beautiful, accessible, and highly customizable Vue 3 calendar component designed specifically for hotel booking systems. Display room availability with three distinct states: available, blocked, and checkout-only. Features intelligent range selection, dynamic pricing, and elegant dark/light themes.
 
-[![npm version](https://badge.fury.io/js/vue-hotel-booking-calendar.svg)](https://badge.fury.io/js/vue-hotel-booking-calendar)
+[![npm version](https://badge.fury.io/js/vue-hotel-booking-calendar.svg)](https://www.npmjs.com/package/vue-hotel-booking-calendar)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub](https://img.shields.io/github/stars/evion-tech-llp/vue-hotel-booking-calendar?style=social)](https://github.com/evion-tech-llp/vue-hotel-booking-calendar)
 
 ## Features
 
@@ -21,6 +22,8 @@ A beautiful, accessible, and highly customizable Vue 3 calendar component design
 
 ## Installation
 
+[![npm package](https://img.shields.io/npm/v/vue-hotel-booking-calendar?color=brightgreen&label=npm%20package)](https://www.npmjs.com/package/vue-hotel-booking-calendar)
+
 ```bash
 npm install vue-hotel-booking-calendar
 ```
@@ -30,6 +33,12 @@ or with yarn:
 ```bash
 yarn add vue-hotel-booking-calendar
 ```
+
+**📦 Package Info:**
+
+- [View on npm](https://www.npmjs.com/package/vue-hotel-booking-calendar)
+- Bundle size: ~9KB gzipped
+- Zero dependencies (peer: Vue 3+)
 
 ## Quick Start
 
@@ -279,11 +288,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 See [CHANGELOG.md](CHANGELOG.md) for a detailed changelog.
 
-## Support
+## Links
 
-- 📖 [Documentation](https://github.com/evion/vue-hotel-booking-calendar#readme)
-- 🐛 [Issue Tracker](https://github.com/evion/vue-hotel-booking-calendar/issues)
-- 💬 [Discussions](https://github.com/evion/vue-hotel-booking-calendar/discussions)
+- 📦 **[npm Package](https://www.npmjs.com/package/vue-hotel-booking-calendar)** - Install and version info
+- 📖 **[Documentation](https://github.com/evion-tech-llp/vue-hotel-booking-calendar#readme)** - Full README and examples
+- 🐛 **[Issue Tracker](https://github.com/evion-tech-llp/vue-hotel-booking-calendar/issues)** - Bug reports and feature requests
+- 💬 **[Discussions](https://github.com/evion-tech-llp/vue-hotel-booking-calendar/discussions)** - Community support
 
 ---
 
