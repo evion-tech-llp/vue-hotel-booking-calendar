@@ -1,7 +1,7 @@
 <template>
     <div class="hotel-dashboard-calendar" :class="`theme-${theme}`" :style="{ '--days-in-month': monthDates.length }">
         <!-- Header with Month Navigation -->
-        <div class="dashboard-header">
+        <div class="dashboard-header" ref="calendarHeaderRef">
             <button @click="navigateMonth(-1)" class="nav-btn" aria-label="Previous month">
                 ← Previous
             </button>
@@ -31,15 +31,27 @@
                     <!-- Room Name Column -->
                     <div class="room-name">{{ room.number }}</div>
 
-                    <!-- Date Cells -->
+                    <!-- Date Cells (Background Grid) -->
                     <div v-for="date in monthDates" :key="`${room.id}-${date.dateString}`" class="date-cell"
                         :class="getCellClasses(room, date.dateString)" :style="getCellStyle(room, date.dateString)"
                         @click="handleCellClick(room, date.dateString)" :title="getCellTooltip(room, date.dateString)">
-                        <!-- Booking indicator -->
-                        <div v-if="hasBooking(room, date.dateString)" class="booking-indicator">
+                        <!-- Keep individual cell indicators as fallback -->
+                        <div v-if="hasBooking(room, date.dateString) && !hasBookingSpan(room, date.day)"
+                            class="booking-indicator">
                             <span class="guest-initials">
                                 {{ getGuestInitials(room, date.dateString) }}
                             </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking Spans (Positioned absolutely over the entire grid) -->
+                <div v-for="(room, roomIndex) in props.rooms" :key="`spans-${room.id}`">
+                    <div v-for="(span, spanIndex) in bookingSpans[room.id]" :key="`span-${room.id}-${spanIndex}`"
+                        class="booking-span" :style="getSpanStyleWithRow(span, roomIndex)"
+                        @click="handleSpanClick(span.booking)" :title="getSpanTooltip(span)">
+                        <div class="span-content">
+                            <span class="span-text">{{ getSpanText(span) }}</span>
                         </div>
                     </div>
                 </div>
@@ -60,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type {
     DashboardCalendarProps,
     DashboardCalendarEmits,
@@ -77,6 +89,28 @@ const props = withDefaults(defineProps<DashboardCalendarProps>(), {
 
 // Emits
 const emit = defineEmits<DashboardCalendarEmits>()
+
+// Template refs and reactive data
+const calendarHeaderRef = ref<HTMLElement | null>(null)
+const actualHeaderHeight = ref(60) // Default fallback
+
+// Dynamically measure header height
+onMounted(() => {
+    if (calendarHeaderRef.value) {
+        actualHeaderHeight.value = calendarHeaderRef.value.getBoundingClientRect().height
+        console.log('📏 Measured header height:', actualHeaderHeight.value)
+    }
+})
+
+// Re-measure header height when month changes (in case content changes)
+watch(() => props.selectedMonth, () => {
+    setTimeout(() => {
+        if (calendarHeaderRef.value) {
+            actualHeaderHeight.value = calendarHeaderRef.value.getBoundingClientRect().height
+            console.log('📏 Re-measured header height:', actualHeaderHeight.value)
+        }
+    }, 50) // Small delay to ensure DOM is updated
+})
 
 // State
 const currentMonth = ref(new Date(props.selectedMonth!))
@@ -142,7 +176,8 @@ const monthDates = computed(() => {
     const dates = []
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day)
-        const dateString = date.toISOString().split('T')[0]
+        // Fix timezone issue: create dateString without timezone conversion
+        const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
         dates.push({
             day,
@@ -155,6 +190,76 @@ const monthDates = computed(() => {
     }
 
     return dates
+})
+
+// Compute booking spans for visual display
+const bookingSpans = computed(() => {
+    const spans: Record<string, any[]> = {}
+
+    props.rooms.forEach(room => {
+        spans[room.id] = []
+
+        // Get bookings for this room that overlap with current month
+        const roomBookings = props.bookings.filter(booking =>
+            booking.roomNumber === room.number
+        )
+
+        roomBookings.forEach(booking => {
+            const checkIn = new Date(booking.checkIn)
+            const checkOut = new Date(booking.checkOut)
+            const currentYear = currentMonth.value.getFullYear()
+            const currentMonthIndex = currentMonth.value.getMonth()
+
+            // Calculate month boundaries correctly (avoid timezone issues)
+            const monthStart = new Date(currentYear, currentMonthIndex, 1)
+            const monthEnd = new Date(currentYear, currentMonthIndex + 1, 0) // Last day of current month
+
+            // Check if booking overlaps with current month
+            if (checkIn <= monthEnd && checkOut > monthStart) {
+                // Calculate start and end days within the current month
+                let startDay: number
+                let endDay: number
+
+                // Fix: Use the actual day of the month, not relative to month start
+                if (checkIn >= monthStart) {
+                    // Booking starts in this month
+                    startDay = checkIn.getDate()
+                } else {
+                    // Booking started in previous month
+                    startDay = 1
+                }
+
+                if (checkOut <= monthEnd) {
+                    // Booking ends in this month (subtract 1 because checkout is exclusive)
+                    endDay = checkOut.getDate() - 1
+                } else {
+                    // Booking continues into next month
+                    endDay = monthEnd.getDate()
+                }
+
+                // Ensure endDay is not less than startDay
+                endDay = Math.max(startDay, endDay)
+
+                // Only create span if we have valid days
+                if (startDay >= 1 && endDay <= monthEnd.getDate() && startDay <= endDay) {
+                    const statusConfig = getStatusConfig(booking.status)
+
+                    spans[room.id].push({
+                        booking,
+                        startDay,
+                        endDay,
+                        length: endDay - startDay + 1,
+                        statusConfig
+                    })
+                }
+            }
+        })
+
+        // Sort spans by start day
+        spans[room.id].sort((a, b) => a.startDay - b.startDay)
+    })
+
+    return spans
 })
 
 // Methods
@@ -264,6 +369,113 @@ const handleCellClick = (room: Room, dateString: string): void => {
     }
 }
 
+const hasBookingSpan = (room: Room, day: number): boolean => {
+    const spans = bookingSpans.value[room.id] || []
+    const hasSpan = spans.some(span =>
+        day >= span.startDay && day <= span.endDay
+    )
+
+    // Temporary debug for span coverage
+    if (hasSpan && room.number === '101') {
+        console.log(`✅ Day ${day} in room ${room.number} covered by span - hiding individual indicator`)
+    }
+
+    return hasSpan
+}
+
+const getSpanStyle = (span: any): Record<string, string> => {
+    const isDark = props.theme === 'dark'
+    const backgroundColor = isDark && span.statusConfig.darkBackgroundColor
+        ? span.statusConfig.darkBackgroundColor
+        : span.statusConfig.backgroundColor
+
+    // Very simple approach: position relative to the date cell area
+    // The room name takes up a fixed width (80px on desktop)
+    const roomColumnWidth = 80 // matches CSS
+    const totalDays = monthDates.value.length
+    const dateColumnWidth = `calc((100% - ${roomColumnWidth}px) / ${totalDays})`
+
+    const left = `calc(${roomColumnWidth}px + (${span.startDay - 1} * ${dateColumnWidth}))`
+    const width = `calc(${span.length} * ${dateColumnWidth})`
+
+    return {
+        backgroundColor,
+        color: span.statusConfig.color,
+        border: `1px solid ${span.statusConfig.color}`,
+        position: 'absolute',
+        left,
+        width,
+        top: '4px',
+        height: '30px',
+        zIndex: '10',
+        borderRadius: '4px'
+    }
+}
+
+const getSpanText = (span: any): string => {
+    const nights = calculateNights(span.booking.checkIn, span.booking.checkOut)
+    const guestName = span.booking.guestName
+
+    // Adjust text based on span length
+    if (span.length === 1) {
+        // Single day: just initials
+        return guestName.split(' ').map((name: string) => name.charAt(0)).join('').substring(0, 2)
+    } else if (span.length <= 3) {
+        // Short span: first name
+        return guestName.split(' ')[0]
+    } else if (span.length <= 6) {
+        // Medium span: first name + nights
+        return `${guestName.split(' ')[0]} (${nights}n)`
+    } else {
+        // Long span: full name + nights
+        return `${guestName} - ${nights} nights`
+    }
+}
+
+const getSpanTooltip = (span: any): string => {
+    const nights = calculateNights(span.booking.checkIn, span.booking.checkOut)
+    const room = props.rooms.find(r => r.number === span.booking.roomNumber)
+    return `${span.booking.guestName} - Room ${room?.number} - ${span.statusConfig.label} - ${nights} nights`
+}
+
+const handleSpanClick = (booking: Booking): void => {
+    emit('booking-click', booking)
+}
+
+const getSpanStyleWithRow = (span: any, roomIndex: number): Record<string, string> => {
+    const isDark = props.theme === 'dark'
+    const backgroundColor = isDark && span.statusConfig.darkBackgroundColor
+        ? span.statusConfig.darkBackgroundColor
+        : span.statusConfig.backgroundColor
+
+    // Calculate position relative to entire calendar grid
+    const roomColumnWidth = 80 // Room name column width
+    const totalDays = monthDates.value.length
+    const dateColumnWidth = `calc((100% - ${roomColumnWidth}px) / ${totalDays})`
+
+    // Horizontal position
+    const left = `calc(${roomColumnWidth}px + (${span.startDay - 1} * ${dateColumnWidth}))`
+    const width = `calc(${span.length} * ${dateColumnWidth})`
+
+    // Vertical position - adjust header height
+    const rowHeight = 38 // Height of each room row (matches date-cell height)
+    const headerHeight = actualHeaderHeight.value - rowHeight + 7 // Add 7px fine-tuning to align properly
+    const top = headerHeight + (roomIndex * rowHeight) // No extra margin
+
+    return {
+        backgroundColor,
+        color: span.statusConfig.color,
+        border: `1px solid ${span.statusConfig.color}`,
+        position: 'absolute',
+        left,
+        width,
+        top: `${top}px`,
+        height: `${rowHeight}px`, // Match cell height exactly
+        zIndex: '10',
+        borderRadius: '4px'
+    }
+}
+
 // Watch for prop changes
 watch(() => props.selectedMonth, (newMonth) => {
     if (newMonth) {
@@ -349,6 +561,8 @@ watch(() => props.selectedMonth, (newMonth) => {
     overflow-y: auto;
     overflow-x: hidden;
     /* Remove horizontal scroll */
+    position: relative;
+    /* For absolute positioned spans */
 }
 
 .calendar-grid {
@@ -473,6 +687,7 @@ watch(() => props.selectedMonth, (newMonth) => {
     background: #2a2a2a;
 }
 
+/* Date Cells */
 .date-cell {
     padding: 0;
     border-right: 1px solid #f1f3f4;
@@ -522,12 +737,53 @@ watch(() => props.selectedMonth, (newMonth) => {
     align-items: center;
     justify-content: center;
     border-radius: 2px;
+    z-index: 5;
+    /* Lower than spans */
 }
 
 .guest-initials {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.5px;
+}
+
+/* Booking Spans */
+.booking-span {
+    /* Absolute positioning to overlay the grid */
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    z-index: 20;
+    /* Higher than individual indicators (z-index: 5) */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    /* Remove margin to fill entire cell area */
+}
+
+.booking-span:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    z-index: 25;
+}
+
+.span-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+}
+
+.span-text {
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
 }
 
 /* Legend */
