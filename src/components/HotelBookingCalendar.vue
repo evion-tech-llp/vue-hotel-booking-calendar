@@ -57,15 +57,16 @@
             'in-range': isDayInRange(day.dateString),
             'range-start': isRangeStart(day.dateString),
             'range-end': isRangeEnd(day.dateString),
-            'available': day.availability?.status === 'available',
-            'blocked': day.availability?.status === 'blocked',
-            'checkout-only': day.availability?.status === 'checkout-only',
-            'disabled': isDayDisabled(day)
+            'available': getEffectiveStatus(day) === 'available',
+            'blocked': getEffectiveStatus(day) === 'blocked',
+            'checkout-only': getEffectiveStatus(day) === 'checkout-only',
+            'disabled': isDayDisabled(day),
+            'click-disabled': isClickDisabled(day)
           }"
           @click="handleDayClick(day)"
           @mouseenter="handleDayHover(day)"
           role="button"
-          :tabindex="isDayDisabled(day) ? -1 : 0"
+          :tabindex="isClickDisabled(day) ? -1 : 0"
           :aria-label="getDayAriaLabel(day)"
           @keydown.enter="handleDayClick(day)"
           @keydown.space.prevent="handleDayClick(day)"
@@ -76,8 +77,6 @@
               {{ formatPrice(day.availability.price) }}
             </div>
           </div>
-          
-          <div class="status-indicator" :class="day.availability?.status"></div>
         </div>
       </div>
     </div>
@@ -126,7 +125,14 @@ const isSelectingRange = ref(false)
 
 // Computed properties
 const minDateObj = computed(() => {
-  if (!props.minDate) return props.disablePastDates ? new Date() : null
+  if (!props.minDate) {
+    if (props.disablePastDates) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Reset time to start of day
+      return today
+    }
+    return null
+  }
   return typeof props.minDate === 'string' ? new Date(props.minDate) : props.minDate
 })
 
@@ -194,14 +200,20 @@ const canGoPrevious = computed(() => {
   if (!minDateObj.value) return true
   const prevMonth = new Date(currentDate.value)
   prevMonth.setMonth(prevMonth.getMonth() - 1)
-  return prevMonth >= minDateObj.value
+  prevMonth.setDate(1) // Set to first day of previous month
+  const minDate = new Date(minDateObj.value)
+  minDate.setDate(1) // Set to first day of min month
+  return prevMonth >= minDate
 })
 
 const canGoNext = computed(() => {
   if (!maxDateObj.value) return true
   const nextMonth = new Date(currentDate.value)
   nextMonth.setMonth(nextMonth.getMonth() + 1)
-  return nextMonth <= maxDateObj.value
+  nextMonth.setDate(1) // Set to first day of next month
+  const maxDate = new Date(maxDateObj.value)
+  maxDate.setDate(1) // Set to first day of max month
+  return nextMonth <= maxDate
 })
 
 // Methods
@@ -221,10 +233,47 @@ const formatPrice = (price: number): string => {
 
 const isDayDisabled = (day: CalendarDay): boolean => {
   if (!day.isCurrentMonth) return true
-  if (day.availability?.status === 'blocked') return true
+  
+  // For past date checking, compare just the date (not time)
+  if (props.disablePastDates) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const dayDate = new Date(day.date)
+    dayDate.setHours(0, 0, 0, 0)
+    if (dayDate < today) return true
+  }
   
   if (minDateObj.value && day.date < minDateObj.value) return true
   if (maxDateObj.value && day.date > maxDateObj.value) return true
+  
+  return false
+}
+
+const isClickDisabled = (day: CalendarDay): boolean => {
+  if (isDayDisabled(day)) return true
+  if (getEffectiveStatus(day) === 'blocked') return true
+  return false
+}
+
+const getEffectiveStatus = (day: CalendarDay): AvailabilityStatus => {
+  // If no availability data is provided for this date, default to 'available'
+  return day.availability?.status || 'available'
+}
+
+const hasBlockedDatesBetween = (startDate: string, endDate: string): boolean => {
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const current = new Date(start)
+  current.setDate(current.getDate() + 1) // Start checking from day after start date
+  
+  while (current < end) {
+    const dateString = current.toISOString().split('T')[0]
+    const availability = availabilityMap.value.get(dateString)
+    if (availability?.status === 'blocked') {
+      return true
+    }
+    current.setDate(current.getDate() + 1)
+  }
   
   return false
 }
@@ -255,21 +304,17 @@ const getDayAriaLabel = (day: CalendarDay): string => {
     day: 'numeric'
   })
   
-  let status = ''
-  if (day.availability?.status) {
-    status = `, ${day.availability.status}`
-  }
-  
-  return `${date}${status}`
+  const status = getEffectiveStatus(day)
+  return `${date}, ${status}`
 }
 
 const handleDayClick = (day: CalendarDay) => {
-  if (isDayDisabled(day)) return
+  if (isClickDisabled(day)) return
   
   const { checkIn, checkOut } = props.modelValue
   const clickedDate = day.dateString
   
-  emit('date-click', clickedDate, day.availability?.status || 'available')
+  emit('date-click', clickedDate, getEffectiveStatus(day))
   
   // Handle selection logic
   if (!checkIn || (checkIn && checkOut)) {
@@ -284,10 +329,20 @@ const handleDayClick = (day: CalendarDay) => {
       return
     }
     
-    const newValue = clickedDate < checkIn 
-      ? { checkIn: clickedDate, checkOut: checkIn }
-      : { checkIn, checkOut: clickedDate }
+    const startDate = clickedDate < checkIn ? clickedDate : checkIn
+    const endDate = clickedDate < checkIn ? checkIn : clickedDate
     
+    // Check if there are blocked dates in between
+    if (hasBlockedDatesBetween(startDate, endDate)) {
+      // Reset selection if blocked dates found
+      const newValue = { checkIn: clickedDate, checkOut: null }
+      emit('update:modelValue', newValue)
+      emit('selection-change', newValue)
+      isSelectingRange.value = true
+      return
+    }
+    
+    const newValue = { checkIn: startDate, checkOut: endDate }
     emit('update:modelValue', newValue)
     emit('selection-change', newValue)
     isSelectingRange.value = false
@@ -342,8 +397,8 @@ watch(() => props.modelValue, (newValue) => {
 }
 
 .theme-dark {
-  background: #2d3748;
-  color: #e2e8f0;
+  background: #111827;
+  color: #f8fafc;
 }
 
 .calendar-header {
@@ -356,8 +411,9 @@ watch(() => props.modelValue, (newValue) => {
 }
 
 .theme-dark .calendar-header {
-  background: #4a5568;
-  border-color: #4a5568;
+  background: #1f2937;
+  border-color: #374151;
+  color: #f8fafc;
 }
 
 .nav-button {
@@ -368,10 +424,15 @@ watch(() => props.modelValue, (newValue) => {
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s;
+  color: inherit;
 }
 
 .nav-button:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.1);
+}
+
+.theme-dark .nav-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .nav-button:disabled {
@@ -404,6 +465,10 @@ watch(() => props.modelValue, (newValue) => {
   padding: 8px 4px;
 }
 
+.theme-dark .weekday {
+  color: #d1d5db;
+}
+
 .days-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -420,6 +485,11 @@ watch(() => props.modelValue, (newValue) => {
   border-radius: 6px;
   transition: all 0.2s;
   min-height: 44px;
+  color: #374151;
+}
+
+.theme-dark .day-cell {
+  color: #f8fafc;
 }
 
 .day-cell:hover:not(.disabled) {
@@ -430,30 +500,38 @@ watch(() => props.modelValue, (newValue) => {
   color: #cbd5e0;
 }
 
+.theme-dark .day-cell.other-month {
+  color: #6b7280;
+}
+
 .day-cell.disabled {
   color: #cbd5e0;
   cursor: not-allowed;
 }
 
+.theme-dark .day-cell.disabled {
+  color: #6b7280;
+}
+
 .day-cell.today {
   font-weight: 600;
-  background: #e6fffa;
+  border: 2px solid #4ade80;
 }
 
 .day-cell.selected {
-  background: #3182ce;
-  color: white;
+  background: #3182ce !important;
+  color: white !important;
 }
 
 .day-cell.in-range {
-  background: #bee3f8;
-  color: #2d3748;
+  background: #bee3f8 !important;
+  color: #2d3748 !important;
 }
 
 .day-cell.range-start,
 .day-cell.range-end {
-  background: #3182ce;
-  color: white;
+  background: #3182ce !important;
+  color: white !important;
 }
 
 .day-content {
@@ -473,37 +551,47 @@ watch(() => props.modelValue, (newValue) => {
 }
 
 .status-indicator {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  display: none;
 }
 
-.status-indicator.available {
-  background: #48bb78;
+/* Base day cell styles - only apply if not disabled and not past dates */
+.day-cell.available:not(.disabled) {
+  background: #f0fdf4;
+  color: #166534;
 }
 
-.status-indicator.checkout-only {
-  background: #ed8936;
+.day-cell.available:not(.disabled):hover {
+  background: #dcfce7;
 }
 
-.status-indicator.blocked {
-  background: #e53e3e;
+.day-cell.checkout-only:not(.disabled) {
+  background: linear-gradient(45deg, #f0fdf4 50%, #fef3c7 50%);
+  color: #1f2937;
 }
 
-.day-cell.available:hover {
-  background: #c6f6d5;
+.day-cell.checkout-only:not(.disabled):hover {
+  background: linear-gradient(45deg, #dcfce7 50%, #fde68a 50%);
 }
 
-.day-cell.checkout-only:hover {
-  background: #fbd38d;
-}
-
-.day-cell.blocked {
-  background: #fed7d7;
+.day-cell.blocked:not(.disabled) {
+  background: #fef2f2 !important;
+  color: #991b1b !important;
   cursor: not-allowed;
+}
+
+.day-cell.blocked:not(.disabled):hover {
+  background: #fee2e2 !important;
+}
+
+/* Past dates - neutral styling (overrides everything) */
+.day-cell.disabled {
+  background: transparent !important;
+  color: #9ca3af !important;
+  cursor: not-allowed;
+}
+
+.day-cell.disabled:hover {
+  background: transparent !important;
 }
 
 .calendar-legend {
@@ -517,8 +605,9 @@ watch(() => props.modelValue, (newValue) => {
 }
 
 .theme-dark .calendar-legend {
-  background: #4a5568;
-  border-color: #4a5568;
+  background: #1f2937;
+  border-color: #374151;
+  color: #f8fafc;
 }
 
 .legend-item {
@@ -547,22 +636,54 @@ watch(() => props.modelValue, (newValue) => {
 
 /* Dark theme overrides */
 .theme-dark .day-cell:hover:not(.disabled) {
-  background: #4a5568;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .theme-dark .day-cell.today {
-  background: #2d3748;
+  border-color: rgba(16, 185, 129, 0.6);
+  color: #f8fafc;
+  background: rgba(16, 185, 129, 0.05);
 }
 
-.theme-dark .day-cell.available:hover {
-  background: #2f855a;
+.theme-dark .day-cell.available:not(.disabled) {
+  background: rgba(16, 185, 129, 0.08);
+  color: #f8fafc;
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
-.theme-dark .day-cell.checkout-only:hover {
-  background: #c05621;
+.theme-dark .day-cell.available:not(.disabled):hover {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
-.theme-dark .day-cell.blocked {
-  background: #c53030;
+.theme-dark .day-cell.checkout-only:not(.disabled) {
+  background: linear-gradient(45deg, rgba(16, 185, 129, 0.08) 50%, rgba(245, 158, 11, 0.08) 50%);
+  color: #f8fafc;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.theme-dark .day-cell.checkout-only:not(.disabled):hover {
+  background: linear-gradient(45deg, rgba(16, 185, 129, 0.12) 50%, rgba(245, 158, 11, 0.12) 50%);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.theme-dark .day-cell.blocked:not(.disabled) {
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #f8fafc !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
+.theme-dark .day-cell.blocked:not(.disabled):hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.theme-dark .day-cell.disabled {
+  background: transparent !important;
+  color: #4b5563 !important;
+}
+
+.theme-dark .day-cell.disabled:hover {
+  background: transparent !important;
 }
 </style> 
