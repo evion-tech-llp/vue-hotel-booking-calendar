@@ -78,7 +78,7 @@
       <div class="price-content">
         <div class="stay-info">
           <span class="nights">{{ priceCalculation.nights }} night{{ priceCalculation.nights !== 1 ? 's' : '' }}</span>
-          <span class="dates">{{ formatDateRange(modelValue.checkIn!, modelValue.checkOut!) }}</span>
+          <span class="dates">{{ formatDateRange(modelValue?.checkIn!, modelValue?.checkOut!) }}</span>
         </div>
 
         <div v-if="priceCalculation.dailyPrices.length > 1" class="breakdown">

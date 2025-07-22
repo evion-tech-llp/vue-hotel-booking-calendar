@@ -1,26 +1,42 @@
 # Vue Hotel Booking Calendar
 
-A beautiful, accessible, and highly customizable Vue 3 calendar component designed specifically for hotel booking systems. Display room availability with three distinct states: available, blocked, and checkout-only. Features intelligent range selection, dynamic pricing, and elegant dark/light themes.
+A comprehensive Vue 3 calendar component designed specifically for hotel booking systems. Features intelligent price calculation, booking flow, and error handling with elegant design and accessibility.
 
 [![npm version](https://badge.fury.io/js/vue-hotel-booking-calendar.svg)](https://www.npmjs.com/package/vue-hotel-booking-calendar)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub](https://img.shields.io/github/stars/evion-tech-llp/vue-hotel-booking-calendar?style=social)](https://github.com/evion-tech-llp/vue-hotel-booking-calendar)
 
-## Features
+## 🌟 **Live Demo**
+
+**[View Interactive Demo →](https://evion-tech-llp.github.io/vue-hotel-booking-calendar/)**
+
+## ✨ Features
 
 🎨 **Beautiful Design** - Modern, clean interface with elegant light and dark themes  
-📱 **Responsive** - Works perfectly on desktop and mobile devices  
-♿ **Accessible** - Full keyboard navigation and screen reader support  
-🌍 **Internationalization** - Built-in support for multiple locales  
+💰 **Price Calculation** - Built-in pricing system with multi-currency support  
+📊 **Booking Summary** - Compact booking flow with "Book Now" functionality  
+⚠️ **Smart Error Handling** - Visual feedback for blocked date selections  
+📱 **Responsive Design** - Works perfectly on desktop and mobile devices  
+♿ **Accessibility** - Full keyboard navigation and screen reader support  
+🌍 **Multi-Currency** - GBP, USD, EUR, JPY with proper locale formatting  
 ⚡ **TypeScript** - Fully typed for better developer experience  
 🎯 **Hotel-Focused** - Three availability states designed for hospitality  
-💰 **Dynamic Pricing** - Optional price display with support for varying rates  
-🔧 **Customizable** - Extensive props and styling options  
-🚫 **Smart Validation** - Prevents selection across blocked dates  
-🌙 **Elegant Themes** - Subtle, professional dark mode with off-white text  
+🔧 **Highly Customizable** - Extensive props and styling options  
+🚫 **Smart Validation** - Prevents selection across blocked dates with helpful errors  
+🌙 **Elegant Themes** - Professional dark mode support  
 📅 **Flexible Data** - Only specify blocked/checkout dates, others auto-available
 
-## Installation
+## 🆕 What's New in v1.0.2
+
+- ✅ **Price Calculation System** - Real-time pricing with daily breakdowns
+- ✅ **Compact Booking Summary** - Space-efficient booking flow
+- ✅ **Book Now Integration** - Complete booking workflow with events
+- ✅ **Enhanced Error Handling** - Visual feedback for selection issues
+- ✅ **Multi-Currency Support** - GBP default with USD, EUR, JPY support
+- ✅ **Improved UX** - Better visual hierarchy and user feedback
+- ✅ **Dynamic Demo** - Always-current dates that never become outdated
+
+## 📦 Installation
 
 [![npm package](https://img.shields.io/npm/v/vue-hotel-booking-calendar?color=brightgreen&label=npm%20package)](https://www.npmjs.com/package/vue-hotel-booking-calendar)
 
@@ -37,10 +53,10 @@ yarn add vue-hotel-booking-calendar
 **📦 Package Info:**
 
 - [View on npm](https://www.npmjs.com/package/vue-hotel-booking-calendar)
-- Bundle size: ~9KB gzipped
+- Bundle size: ~12KB gzipped
 - Zero dependencies (peer: Vue 3+)
 
-## Quick Start
+## 🚀 Quick Start
 
 ### Global Registration
 
@@ -51,250 +67,220 @@ import 'vue-hotel-booking-calendar/dist/style.css'
 
 const app = createApp(App)
 app.use(VueHotelBookingCalendar)
+app.mount('#app')
 ```
 
-### Local Registration
+### Component Registration
 
 ```vue
-<template>
-  <HotelBookingCalendar
-    v-model="selection"
-    :availability-data="availabilityData"
-    :show-prices="true"
-    @selection-change="handleSelectionChange"
-  />
-</template>
-
 <script setup lang="ts">
 import { ref } from 'vue'
 import { HotelBookingCalendar } from 'vue-hotel-booking-calendar'
-import type { DateAvailability } from 'vue-hotel-booking-calendar'
 import 'vue-hotel-booking-calendar/dist/style.css'
 
-const selection = ref({
-  checkIn: null,
-  checkOut: null,
-})
+const selectedDates = ref({ checkIn: null, checkOut: null })
+</script>
 
-// Only specify blocked/checkout-only dates - others will be available by default
-const availabilityData: DateAvailability[] = [
-  { date: '2024-01-16', status: 'checkout-only', price: 89 },
-  { date: '2024-01-17', status: 'blocked' },
-  { date: '2024-01-22', status: 'blocked' },
-  { date: '2024-01-25', status: 'checkout-only', price: 129 },
-  // Available dates can optionally include pricing
-  { date: '2024-01-20', status: 'available', price: 200 }, // Peak pricing
-  // All other dates will automatically be 'available' at base rate
+<template>
+  <HotelBookingCalendar
+    v-model="selectedDates"
+    :show-price-calculation="true"
+    currency="GBP"
+    :base-price="85"
+    @book-now="handleBooking"
+  />
+</template>
+```
+
+## 💰 Price Calculation & Booking Flow
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { HotelBookingCalendar } from 'vue-hotel-booking-calendar'
+
+const selectedDates = ref({ checkIn: null, checkOut: null })
+
+const availabilityData = [
+  { date: '2025-01-15', status: 'available', price: 120 },
+  { date: '2025-01-16', status: 'available', price: 150 }, // Weekend rate
+  { date: '2025-01-17', status: 'blocked' },
+  { date: '2025-01-18', status: 'checkout-only', price: 95 },
 ]
 
-const handleSelectionChange = (newSelection) => {
-  console.log('Selection changed:', newSelection)
+const handleBooking = (booking) => {
+  console.log('Booking Details:', booking)
+  // booking.selection = { checkIn: '2025-01-15', checkOut: '2025-01-16' }
+  // booking.calculation = { nights: 1, totalPrice: 120, currency: 'GBP', ... }
+
+  // Redirect to payment or send to booking API
+  window.location.href = `/checkout?total=${booking.calculation.totalPrice}`
 }
 </script>
+
+<template>
+  <HotelBookingCalendar
+    v-model="selectedDates"
+    :availability-data="availabilityData"
+    :show-price-calculation="true"
+    :show-selection-errors="true"
+    currency="GBP"
+    :base-price="85"
+    @book-now="handleBooking"
+  />
+</template>
 ```
 
-## Availability States
+## ⚠️ Error Handling
 
-The component supports three distinct availability states for hotel booking:
+The component intelligently handles selection errors:
 
-- **Available** (`available`) - Room is available for both check-in and check-out (DEFAULT)
-- **Checkout Only** (`checkout-only`) - Only checkout is allowed on this date
-- **Blocked** (`blocked`) - Date is completely unavailable
+```vue
+<script setup lang="ts">
+const handleSelectionError = (error) => {
+  console.log('Selection Error:', error.message)
+  console.log('Blocked Dates:', error.blockedDates)
+  // Show custom error message or handle as needed
+}
+</script>
 
-**✨ Smart Defaults:** You only need to provide data for dates that are **blocked** or **checkout-only**. All dates without data will automatically be treated as **available** (green). This makes integration incredibly simple!
+<template>
+  <HotelBookingCalendar
+    v-model="selectedDates"
+    :availability-data="availabilityData"
+    :show-selection-errors="true"
+    @selection-error="handleSelectionError"
+  />
+</template>
+```
 
-**🚫 Intelligent Validation:** The calendar automatically prevents users from selecting date ranges that contain blocked dates, ensuring only valid bookings can be made.
+## 🌍 Multi-Currency Support
 
-## Props
+```vue
+<template>
+  <!-- British Pounds (Default) -->
+  <HotelBookingCalendar v-model="selectedDates" currency="GBP" locale="en-GB" :base-price="85" />
 
-| Prop               | Type                 | Default                             | Description                        |
-| ------------------ | -------------------- | ----------------------------------- | ---------------------------------- |
-| `modelValue`       | `Object`             | `{ checkIn: null, checkOut: null }` | Selected date range                |
-| `availabilityData` | `DateAvailability[]` | `[]`                                | Array of date availability objects |
-| `minDate`          | `string \| Date`     | -                                   | Minimum selectable date            |
-| `maxDate`          | `string \| Date`     | -                                   | Maximum selectable date            |
-| `locale`           | `string`             | `'en-US'`                           | Locale for date formatting         |
-| `disablePastDates` | `boolean`            | `true`                              | Disable dates before today         |
-| `showPrices`       | `boolean`            | `false`                             | Show prices on available dates     |
-| `allowSingleDay`   | `boolean`            | `false`                             | Allow single day selections        |
-| `theme`            | `'light' \| 'dark'`  | `'light'`                           | Visual theme                       |
+  <!-- US Dollars -->
+  <HotelBookingCalendar v-model="selectedDates" currency="USD" locale="en-US" :base-price="120" />
 
-## Events
+  <!-- Japanese Yen -->
+  <HotelBookingCalendar v-model="selectedDates" currency="JPY" locale="ja-JP" :base-price="12000" />
+</template>
+```
 
-| Event               | Payload                                                   | Description                               |
-| ------------------- | --------------------------------------------------------- | ----------------------------------------- |
-| `update:modelValue` | `{ checkIn?: string \| null, checkOut?: string \| null }` | Emitted when selection changes            |
-| `date-click`        | `(date: string, status: AvailabilityStatus)`              | Emitted when a date is clicked            |
-| `selection-change`  | `{ checkIn?: string \| null, checkOut?: string \| null }` | Emitted when date range selection changes |
+## 🎨 Theming
 
-## TypeScript Types
+```vue
+<template>
+  <!-- Light Theme (Default) -->
+  <HotelBookingCalendar theme="light" />
+
+  <!-- Dark Theme -->
+  <HotelBookingCalendar theme="dark" />
+</template>
+```
+
+## 📅 Availability States
+
+The calendar supports three distinct availability states:
+
+- **Available** (Green) - Bookable dates
+- **Blocked** (Red) - Unavailable dates
+- **Checkout-only** (Half Green/Orange) - Check-out only dates
 
 ```typescript
-export type AvailabilityStatus = 'available' | 'blocked' | 'checkout-only'
-
-export interface DateAvailability {
-  date: string // ISO date string (YYYY-MM-DD)
-  status: AvailabilityStatus
-  price?: number
-  minStay?: number
-  maxStay?: number
-}
+const availabilityData = [
+  { date: '2025-01-15', status: 'available', price: 120 },
+  { date: '2025-01-16', status: 'blocked' }, // Fully booked
+  { date: '2025-01-17', status: 'checkout-only', price: 95 },
+]
 ```
 
-## Examples
+## 🛠 Props
 
-### Basic Usage
+| Prop                   | Type          | Default                             | Description                         |
+| ---------------------- | ------------- | ----------------------------------- | ----------------------------------- |
+| `modelValue`           | `Object`      | `{ checkIn: null, checkOut: null }` | Selected dates                      |
+| `availabilityData`     | `Array`       | `[]`                                | Availability and pricing data       |
+| `basePrice`            | `Number`      | `85`                                | Default price per night (GBP)       |
+| `currency`             | `String`      | `'GBP'`                             | Currency code (GBP, USD, EUR, JPY)  |
+| `locale`               | `String`      | `'en-GB'`                           | Locale for date/currency formatting |
+| `theme`                | `String`      | `'light'`                           | Theme ('light' or 'dark')           |
+| `showPrices`           | `Boolean`     | `false`                             | Show prices on calendar dates       |
+| `showPriceCalculation` | `Boolean`     | `true`                              | Show booking summary                |
+| `showSelectionErrors`  | `Boolean`     | `true`                              | Show error messages                 |
+| `disablePastDates`     | `Boolean`     | `true`                              | Disable past dates                  |
+| `allowSingleDay`       | `Boolean`     | `false`                             | Allow same-day check-in/out         |
+| `minDate`              | `String/Date` | `null`                              | Minimum selectable date             |
+| `maxDate`              | `String/Date` | `null`                              | Maximum selectable date             |
 
-```vue
-<HotelBookingCalendar v-model="dates" :availability-data="availability" />
+## 📡 Events
+
+| Event               | Payload                      | Description                 |
+| ------------------- | ---------------------------- | --------------------------- |
+| `update:modelValue` | `{ checkIn, checkOut }`      | Date selection changed      |
+| `selection-change`  | `{ checkIn, checkOut }`      | Alternative selection event |
+| `date-click`        | `(date, status)`             | Individual date clicked     |
+| `price-calculation` | `PriceCalculation`           | Price calculation updated   |
+| `selection-error`   | `SelectionError`             | Selection validation error  |
+| `book-now`          | `{ selection, calculation }` | Book Now button clicked     |
+
+## 🎯 TypeScript Support
+
+Full TypeScript definitions included:
+
+```typescript
+import type {
+  DateAvailability,
+  PriceCalculation,
+  SelectionError,
+  CalendarProps,
+  CalendarEmits,
+} from 'vue-hotel-booking-calendar'
 ```
 
-### With Dynamic Pricing and Dark Theme
+## 🎨 Custom Styling
 
-```vue
-<HotelBookingCalendar
-  v-model="dates"
-  :availability-data="pricingData"
-  :show-prices="true"
-  theme="dark"
-/>
-```
-
-**Note:** Prices automatically adjust based on availability data. Perfect for showing weekend rates, seasonal pricing, or demand-based pricing.
-
-### Custom Date Range
-
-```vue
-<HotelBookingCalendar
-  v-model="dates"
-  :availability-data="blockedDates"
-  min-date="2024-01-01"
-  max-date="2024-12-31"
-  :disable-past-dates="false"
-/>
-```
-
-### French Locale
-
-```vue
-<HotelBookingCalendar v-model="dates" :availability-data="availability" locale="fr-FR" />
-```
-
-## Styling
-
-The component features carefully crafted themes optimized for hospitality applications:
-
-**Light Theme:**
-
-- Clean, soft backgrounds with subtle color coding
-- Green tints for available dates
-- Red tints for blocked dates
-- Half-green/half-yellow for checkout-only dates
-
-**Dark Theme:**
-
-- Professional dark backgrounds with off-white text
-- Extremely subtle color overlays (8% opacity)
-- Elegant borders for status indication
-- Easy on the eyes for extended use
-
-### Custom Styling
-
-Override default styles with CSS:
+Override CSS custom properties:
 
 ```css
 .hotel-booking-calendar {
-  --primary-color: #3182ce;
-  --border-radius: 8px;
-  /* Theme colors automatically calculated */
-}
-
-/* Dark theme customization */
-.theme-dark .day-cell.available:not(.disabled) {
-  background: rgba(your-color, 0.08);
-  border-color: rgba(your-color, 0.2);
+  --calendar-border-radius: 12px;
+  --calendar-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --available-color: #10b981;
+  --blocked-color: #ef4444;
+  --checkout-color: #f59e0b;
 }
 ```
 
-### Custom Legend
+## ♿ Accessibility
 
-You can provide a custom legend using the `legend` slot:
+- Full keyboard navigation
+- Screen reader support
+- ARIA labels and descriptions
+- High contrast support
+- Focus management
 
-```vue
-<HotelBookingCalendar v-model="dates" :availability-data="blockedDates">
-  <template #legend>
-    <div class="my-custom-legend">
-      <!-- Your custom legend content -->
-    </div>
-  </template>
-</HotelBookingCalendar>
-```
+## 📱 Browser Support
 
-## Development
+- Chrome/Edge 88+
+- Firefox 78+
+- Safari 14+
+- Mobile browsers
 
-### Setup
+## 🤝 Contributing
 
-```bash
-# Clone the repository
-git clone https://github.com/evion/vue-hotel-booking-calendar.git
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-# Install dependencies
-cd vue-hotel-booking-calendar
-npm install
+## 📄 License
 
-# Start development server
-npm run dev
-```
+MIT License - see [LICENSE](LICENSE) file for details.
 
-### Build
+## 🏢 About Evion Technologies
 
-```bash
-# Build for production
-npm run build:lib
-
-# Type check
-npm run type-check
-
-# Lint
-npm run lint
-
-# Format
-npm run format
-```
-
-## Browser Support
-
-- **Chrome** ≥ 87
-- **Firefox** ≥ 78
-- **Safari** ≥ 14
-- **Edge** ≥ 88
-- **Mobile browsers** fully supported
-
-## Contributing
-
-Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) and [code of conduct](CODE_OF_CONDUCT.md).
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for a detailed changelog.
-
-## Links
-
-- 📦 **[npm Package](https://www.npmjs.com/package/vue-hotel-booking-calendar)** - Install and version info
-- 📖 **[Documentation](https://github.com/evion-tech-llp/vue-hotel-booking-calendar#readme)** - Full README and examples
-- 🐛 **[Issue Tracker](https://github.com/evion-tech-llp/vue-hotel-booking-calendar/issues)** - Bug reports and feature requests
-- 💬 **[Discussions](https://github.com/evion-tech-llp/vue-hotel-booking-calendar/discussions)** - Community support
+Built with ❤️ by [Evion Technologies LLP](https://evion.tech) - Specialists in Vue.js and TypeScript development.
 
 ---
 
-Made with ❤️ by [Evion Technologies LLP](https://github.com/evion)
+⭐ **Star us on GitHub** if this component helps your project!

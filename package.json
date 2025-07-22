@@ -1,7 +1,7 @@
 {
   "name": "vue-hotel-booking-calendar",
-  "version": "1.0.0",
-  "description": "A Vue 3 inline calendar component for displaying hotel room availability with three states: available, blocked, and checkout-only",
+  "version": "1.0.2",
+  "description": "A Vue 3 calendar component for hotel bookings with price calculation, error handling, and booking flow. Features three availability states, multi-currency support, and compact booking summary.",
   "main": "dist/vue-hotel-booking-calendar.umd.js",
   "module": "dist/vue-hotel-booking-calendar.es.js",
   "types": "dist/index.d.ts",
@@ -38,7 +38,13 @@
     "availability",
     "component",
     "typescript",
-    "inline-calendar"
+    "inline-calendar",
+    "price-calculation",
+    "booking-flow",
+    "multi-currency",
+    "gbp",
+    "booking-summary",
+    "error-handling"
   ],
   "author": "Evion Technologies LLP",
   "license": "MIT",

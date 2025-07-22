@@ -2,41 +2,54 @@
   <div id="app">
     <div class="demo-container">
       <h1>Vue Hotel Booking Calendar Demo</h1>
+      <div class="version-badge">
+        <span class="version-tag">v1.0.2</span>
+        <span class="version-label">Latest Release</span>
+      </div>
       <p class="demo-intro">
-        Interactive demo showcasing all features including price calculation, error handling, and different availability
-        states.
+        Interactive demo showcasing the new v1.0.2 features including price calculation, booking flow, and error
+        handling.
         <br><strong>All dates are dynamically generated</strong> relative to today ({{ formatDate(today) }}) so the demo
         stays current!
       </p>
 
-      <div class="demo-section">
-        <h2>🏷️ Price Calculation & Booking Summary</h2>
+      <div class="demo-section featured">
+        <div class="feature-badge">🆕 NEW in v1.0.2</div>
+        <h2>💰 Price Calculation & Booking Flow</h2>
         <p class="demo-description">
-          Enhanced calendar with full price calculation, booking summary, and currency formatting.
-          Select dates to see total pricing with daily breakdown. Base price: $150/night.
+          Complete booking experience with real-time price calculation, compact summary, and Book Now functionality.
+          Select dates to see total pricing with daily breakdown. Base price: £95/night.
         </p>
         <HotelBookingCalendar v-model="priceSelection" :availability-data="dynamicAvailabilityWithPrices"
-          :show-prices="false" :show-price-calculation="true" :base-price="150" currency="USD"
-          @selection-change="onSelectionChange" @price-calculation="onPriceCalculation" />
+          :show-prices="true" :show-price-calculation="true" :base-price="95" currency="GBP" locale="en-GB"
+          @selection-change="onSelectionChange" @price-calculation="onPriceCalculation" @book-now="onBookNow" />
         <div v-if="currentPriceCalculation" class="price-info">
           <h4>💰 Live Price Calculation:</h4>
           <p><strong>Nights:</strong> {{ currentPriceCalculation.nights }}</p>
-          <p><strong>Total:</strong> {{ formatPrice(currentPriceCalculation.totalPrice) }}</p>
-          <p><strong>Average per night:</strong> {{ formatPrice(currentPriceCalculation.averagePerNight) }}</p>
+          <p><strong>Total:</strong> {{ formatPriceGBP(currentPriceCalculation.totalPrice) }}</p>
+          <p><strong>Average per night:</strong> {{ formatPriceGBP(currentPriceCalculation.averagePerNight) }}</p>
+        </div>
+        <div v-if="lastBooking" class="booking-info">
+          <h4>🎯 Last Booking Event:</h4>
+          <p><strong>Check-in:</strong> {{ lastBooking.selection.checkIn }}</p>
+          <p><strong>Check-out:</strong> {{ lastBooking.selection.checkOut }}</p>
+          <p><strong>Total:</strong> {{ formatPriceGBP(lastBooking.calculation.totalPrice) }}</p>
+          <p class="booking-note">Ready for payment integration!</p>
         </div>
       </div>
 
-      <div class="demo-section">
-        <h2>⚠️ Selection Error Handling</h2>
+      <div class="demo-section featured">
+        <div class="feature-badge">🆕 NEW in v1.0.2</div>
+        <h2>⚠️ Intelligent Error Handling</h2>
         <p class="demo-description">
-          Demonstrates error handling when selecting ranges with blocked dates.
+          Smart error handling with visual feedback when selecting ranges with blocked dates.
           Try selecting a range that includes red (blocked) dates - you'll see helpful error messages.
-          <strong>Tip:</strong> Try selecting from {{ formatDateShort(getDateDaysFromNow(5)) }} to {{
+          <strong>Tip:</strong> Try selecting from {{ formatDateShort(getDateDaysFromNow(7)) }} to {{
             formatDateShort(getDateDaysFromNow(12)) }} to see the error in action.
         </p>
         <HotelBookingCalendar v-model="errorSelection" :availability-data="dynamicAvailabilityWithBlockedRanges"
-          :show-prices="true" :show-price-calculation="true" :show-selection-errors="true" :base-price="120"
-          currency="EUR" @selection-error="onSelectionError" @price-calculation="onPriceCalculation" />
+          :show-prices="true" :show-price-calculation="true" :show-selection-errors="true" :base-price="78"
+          currency="GBP" locale="en-GB" @selection-error="onSelectionError" @price-calculation="onPriceCalculation" />
         <div v-if="lastSelectionError" class="error-info">
           <h4>🚨 Last Selection Error:</h4>
           <p><strong>Type:</strong> {{ lastSelectionError.type }}</p>
@@ -182,6 +195,7 @@ const selection5 = ref({
 // Event data
 const currentPriceCalculation = ref<PriceCalculation | null>(null)
 const lastSelectionError = ref<SelectionError | null>(null)
+const lastBooking = ref<{ selection: { checkIn: string | null; checkOut: string | null }; calculation: PriceCalculation } | null>(null)
 
 // Helper functions for dynamic date generation
 const getDateDaysFromNow = (days: number): Date => {
@@ -373,11 +387,23 @@ const onSelectionError = (error: SelectionError) => {
   console.log('Selection error:', error)
 }
 
+const onBookNow = (booking: { selection: { checkIn: string | null; checkOut: string | null }; calculation: PriceCalculation }) => {
+  lastBooking.value = booking
+  console.log('Book Now event:', booking)
+}
+
 // Helper functions for display
 const formatPrice = (price: number): string => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD'
+  }).format(price)
+}
+
+const formatPriceGBP = (price: number): string => {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP'
   }).format(price)
 }
 
@@ -411,6 +437,18 @@ h1 {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.version-badge {
+  display: inline-block;
+  background-color: #4f46e5;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .demo-intro {
@@ -491,6 +529,20 @@ h1 {
   font-weight: 500;
 }
 
+.booking-info {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+}
+
+.booking-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
 .selection-info {
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
   padding: 2rem;
@@ -538,6 +590,20 @@ h1 {
 
 .selection-item p strong {
   color: #374151;
+}
+
+.feature-badge {
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  background-color: #4f46e5;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1;
 }
 
 /* Responsive design */
