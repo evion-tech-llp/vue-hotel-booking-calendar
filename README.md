@@ -38,11 +38,12 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 🌙 **Theme Support** - Professional light and dark themes  
 🔧 **Highly Customizable** - Extensive props and styling options
 
-## 🆕 What's New in v1.0.3
+## 🆕 What's New in v1.0.4
 
-- ✅ **Hotel Dashboard Component** - New horizontal grid for room-wise booking management
-- ✅ **Elegant White Design** - Clean, professional aesthetic with subtle shadows
-- ✅ **Custom Status System** - Define your own booking statuses and colors
+- ✅ **Fixed Package Entry Resolution** - Resolved "Failed to resolve entry" errors
+- ✅ **Modern ES Module Support** - Added `"type": "module"` for better compatibility
+- ✅ **Eliminated Build Warnings** - Clean build output without CJS deprecation warnings
+- ✅ **Enhanced Tree-Shaking** - Improved build configuration for smaller bundle sizes
 - ✅ **Event-Driven Architecture** - Dashboard emits events for flexible integration
 - ✅ **Optimized Performance** - Streamlined components with better prop management
 - ✅ **Enhanced Documentation** - Complete guide for both components

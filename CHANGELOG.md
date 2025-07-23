@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2025-01-23
+
+### 🔧 Build & Package Configuration Fixes
+
+**🐛 Package Resolution:**
+
+- ✅ **Fixed package entry resolution error** - Updated module exports to match actual generated files
+- ✅ **Resolved CJS build deprecation warning** - Added `"type": "module"` for modern ES module support
+- ✅ **Updated file extensions** - Aligned package.json entries with Vite's ES module output (.js for ESM, .umd.cjs for CommonJS)
+- ✅ **Enhanced build configuration** - Added `exports: 'named'` to eliminate mixed export warnings
+
+**📦 Improved Package Structure:**
+
+- ✅ **Modern ES module configuration** - Full ES module support for better tree-shaking and compatibility
+- ✅ **Proper CommonJS fallback** - Maintained backward compatibility with `.umd.cjs` files
+- ✅ **Clean build output** - No more deprecation warnings or configuration mismatches
+
 ## [1.0.3] - 2025-01-13
 
 ### 🏨 Hotel Dashboard Component Release
