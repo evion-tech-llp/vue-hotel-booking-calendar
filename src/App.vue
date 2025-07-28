@@ -18,6 +18,7 @@
         <h2>🏷️ Guest Booking Calendar</h2>
         <p class="demo-description">
           Enhanced calendar for guests with price calculation, booking summary, and currency formatting.
+          <strong>Custom text labels demo</strong>: Notice the simplified language like "Back/Forward", "Your Stay", "Book This Stay", etc.
           Base price: £85/night. Select dates to see pricing and booking flow.
         </p>
         <HotelBookingCalendar v-model="guestSelection" :availability-data="guestAvailabilityData" :base-price="85"
@@ -32,7 +33,7 @@
         <h2>🏨 Hotel Dashboard Calendar</h2>
         <p class="demo-description">
           Hotel dashboard component focused on clean display and event emission. Shows room-wise booking grid with guest
-          initials.
+          initials. <strong>Custom text labels</strong>: Uses simple terms like "Previous/Next" and "Free" instead of "Available".
           <br><strong>Hover over bookings</strong> to see full guest name and booking details in tooltip.
           <br><strong>Click bookings</strong> to emit booking-click event to parent for detailed handling.
           <br><strong>Click empty cells</strong> to emit booking-create event to parent.
@@ -61,8 +62,8 @@
             <p>Complete booking management with room-wise views, occupancy tracking, and guest management.</p>
           </div>
           <div class="feature-card">
-            <h3>🌍 Internationalization</h3>
-            <p>Multi-currency support with proper locale formatting and date handling.</p>
+            <h3>🌍 Custom Text Labels</h3>
+            <p>Fully customizable text labels for different languages or simplified terminology - perfect for different audiences.</p>
           </div>
           <div class="feature-card">
             <h3>📱 Responsive Design</h3>
@@ -99,31 +100,31 @@ const guestSelection = ref<DateRange>({ checkIn: null, checkOut: null })
 const dashboardMonth = ref(new Date())
 const today = new Date()
 
-// Custom text labels for guest calendar
+// Custom text labels for guest calendar - Simple demo language
 const guestCalendarLabels = ref<CalendarTextLabels>({
-  previousMonth: '← Anterior',
-  nextMonth: 'Siguiente →',
-  bookingSummary: 'Resumen de Reserva',
-  nights: 'noches',
-  night: 'noche',
-  priceBreakdown: 'Desglose de precios',
-  total: 'Total',
-  bookNow: 'Reservar Ahora',
-  available: 'Disponible',
-  checkoutOnly: 'Solo Salida',
-  blocked: 'Bloqueado',
-  clearSelection: 'Limpiar selección',
-  dismissError: 'Descartar error'
+  previousMonth: '← Back',
+  nextMonth: 'Forward →',
+  bookingSummary: 'Your Stay',
+  nights: 'nights',
+  night: 'night',
+  priceBreakdown: 'Show details',
+  total: 'Total Cost',
+  bookNow: 'Book This Stay',
+  available: 'Open',
+  checkoutOnly: 'Check-out Only',
+  blocked: 'Not Available',
+  clearSelection: 'Start over',
+  dismissError: 'Got it'
 })
 
-// Custom text labels for dashboard calendar
+// Custom text labels for dashboard calendar - Simple demo language
 const dashboardCalendarLabels = ref<DashboardTextLabels>({
-  previousMonth: '← Mes Anterior',
-  nextMonth: 'Mes Siguiente →',
-  room: 'Habitación',
-  available: 'Disponible',
-  createBooking: 'Clic para crear reserva',
-  clickForDetails: 'Clic para detalles'
+  previousMonth: '← Previous',
+  nextMonth: 'Next →',
+  room: 'Room',
+  available: 'Free',
+  createBooking: 'Click to add booking',
+  clickForDetails: 'Click to view details'
 })
 
 // Helper function to get dynamic dates
