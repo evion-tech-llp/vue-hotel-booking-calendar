@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2025-01-23
+
+### 🆕 Enhanced Customization & Navigation Features
+
+**🎨 Custom Text Labels System:**
+
+- ✅ **Fully customizable text labels** - Both calendars now support custom text labels for all UI elements
+- ✅ **Internationalization ready** - Perfect for multi-language applications or simplified terminology
+- ✅ **Complete label coverage** - Navigation buttons, booking summaries, status labels, tooltips, and error messages
+- ✅ **Fallback system** - Uses sensible English defaults when custom labels aren't provided
+- ✅ **Type-safe implementation** - Full TypeScript interfaces for `CalendarTextLabels` and `DashboardTextLabels`
+
+**📅 Enhanced Navigation Control:**
+
+- ✅ **Previous month navigation option** - New `allowPreviousMonthNavigation` prop for both calendars
+- ✅ **Flexible date restrictions** - Allow navigation to past months even when `disablePastDates` is enabled
+- ✅ **Better user experience** - Users can view historical data without breaking date selection rules
+
+**🏗️ Dashboard Calendar Architecture Improvement:**
+
+- ✅ **Refactored to CSS Grid spans** - Replaced absolute positioning with native CSS grid column spans
+- ✅ **More semantic structure** - Booking spans are now actual grid items instead of overlays
+- ✅ **Better performance** - Eliminated complex positioning calculations and manual adjustments
+- ✅ **Improved accessibility** - Screen readers can better understand the booking span structure
+- ✅ **Cleaner codebase** - Removed ~30 lines of positioning logic while maintaining all functionality
+
+**📦 New Props Added:**
+
+```typescript
+// Both HotelBookingCalendar and HotelDashboardCalendar
+allowPreviousMonthNavigation?: boolean  // Default: false
+textLabels?: CalendarTextLabels | DashboardTextLabels  // Default: {}
+```
+
 ## [1.0.4] - 2025-01-23
 
 ### 🔧 Build & Package Configuration Fixes

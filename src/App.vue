@@ -3,7 +3,7 @@
     <div class="demo-container">
       <h1>Vue Hotel Booking Calendar Demo</h1>
       <div class="version-badge">
-        <span class="version-tag">v1.0.4</span>
+        <span class="version-tag">v1.0.5</span>
         <span class="version-label">Latest Release</span>
       </div>
       <p class="demo-intro">
