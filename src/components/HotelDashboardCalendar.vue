@@ -1,7 +1,7 @@
 <template>
     <div class="hotel-dashboard-calendar" :class="`theme-${theme}`" :style="{ '--days-in-month': monthDates.length }">
         <!-- Header with Month Navigation -->
-        <div class="dashboard-header" ref="calendarHeaderRef">
+        <div class="dashboard-header">
             <button @click="navigateMonth(-1)" class="nav-btn" :aria-label="labels.previousMonth">
                 {{ labels.previousMonth }}
             </button>
@@ -31,29 +31,32 @@
                     <!-- Room Name Column -->
                     <div class="room-name">{{ room.number }}</div>
 
-                    <!-- Date Cells (Background Grid) -->
-                    <div v-for="date in monthDates" :key="`${room.id}-${date.dateString}`" class="date-cell"
-                        :class="getCellClasses(room, date.dateString)" :style="getCellStyle(room, date.dateString)"
-                        @click="handleCellClick(room, date.dateString)" :title="getCellTooltip(room, date.dateString)">
-                        <!-- Keep individual cell indicators as fallback -->
-                        <div v-if="hasBooking(room, date.dateString) && !hasBookingSpan(room, date.day)"
-                            class="booking-indicator">
-                            <span class="guest-initials">
-                                {{ getGuestInitials(room, date.dateString) }}
-                            </span>
+                    <!-- Date Cells with Grid Spans -->
+                    <template v-for="(dateCell, cellIndex) in getGridCellsForRoom(room)" :key="`${room.id}-${cellIndex}`">
+                        <div v-if="dateCell.type === 'booking-span'" 
+                            class="booking-span-cell"
+                            :class="getCellClasses(room, dateCell.startDate)"
+                            :style="getBookingSpanStyle(dateCell)"
+                            @click="handleSpanClick(dateCell.booking)" 
+                            :title="getSpanTooltip(dateCell)">
+                            <div class="span-content">
+                                <span class="span-text">{{ getSpanText(dateCell) }}</span>
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Booking Spans (Positioned absolutely over the entire grid) -->
-                <div v-for="(room, roomIndex) in props.rooms" :key="`spans-${room.id}`">
-                    <div v-for="(span, spanIndex) in bookingSpans[room.id]" :key="`span-${room.id}-${spanIndex}`"
-                        class="booking-span" :style="getSpanStyleWithRow(span, roomIndex)"
-                        @click="handleSpanClick(span.booking)" :title="getSpanTooltip(span)">
-                        <div class="span-content">
-                            <span class="span-text">{{ getSpanText(span) }}</span>
+                        <div v-else 
+                            class="date-cell"
+                            :class="getCellClasses(room, dateCell.dateString)" 
+                            :style="getCellStyle(room, dateCell.dateString)"
+                            @click="handleCellClick(room, dateCell.dateString)" 
+                            :title="getCellTooltip(room, dateCell.dateString)">
+                            <!-- Single day booking indicator (when not part of a span) -->
+                            <div v-if="hasBooking(room, dateCell.dateString)" class="booking-indicator">
+                                <span class="guest-initials">
+                                    {{ getGuestInitials(room, dateCell.dateString) }}
+                                </span>
+                            </div>
                         </div>
-                    </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -72,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type {
     DashboardCalendarProps,
     DashboardCalendarEmits,
@@ -92,25 +95,7 @@ const props = withDefaults(defineProps<DashboardCalendarProps>(), {
 // Emits
 const emit = defineEmits<DashboardCalendarEmits>()
 
-// Template refs and reactive data
-const calendarHeaderRef = ref<HTMLElement | null>(null)
-const actualHeaderHeight = ref(60) // Default fallback
-
-// Dynamically measure header height
-onMounted(() => {
-    if (calendarHeaderRef.value) {
-        actualHeaderHeight.value = calendarHeaderRef.value.getBoundingClientRect().height
-    }
-})
-
-// Re-measure header height when month changes (in case content changes)
-watch(() => props.selectedMonth, () => {
-    setTimeout(() => {
-        if (calendarHeaderRef.value) {
-            actualHeaderHeight.value = calendarHeaderRef.value.getBoundingClientRect().height
-        }
-    }, 50) // Small delay to ensure DOM is updated
-})
+// Template refs and reactive data (header height measurement no longer needed with grid spans)
 
 // State
 const currentMonth = ref(new Date(props.selectedMonth!))
@@ -398,7 +383,71 @@ const hasBookingSpan = (room: Room, day: number): boolean => {
     return hasSpan
 }
 
+// NEW: Generate grid cells for a room with proper spans
+const getGridCellsForRoom = (room: Room): any[] => {
+    const cells: any[] = []
+    const roomSpans = bookingSpans.value[room.id] || []
+    const processedDays = new Set<number>()
 
+    // Sort spans by start day to process them in order
+    const sortedSpans = [...roomSpans].sort((a, b) => a.startDay - b.startDay)
+
+    // Process each day of the month
+    for (let day = 1; day <= monthDates.value.length; day++) {
+        if (processedDays.has(day)) continue
+
+        // Check if this day is the start of a booking span
+        const span = sortedSpans.find(s => s.startDay === day)
+        
+        if (span) {
+            // Create a booking span cell
+            const dateString = monthDates.value[day - 1]?.dateString || ''
+            cells.push({
+                type: 'booking-span',
+                booking: span.booking,
+                startDay: span.startDay,
+                endDay: span.endDay,
+                length: span.length,
+                statusConfig: span.statusConfig,
+                startDate: dateString
+            })
+            
+            // Mark all days in this span as processed
+            for (let spanDay = span.startDay; spanDay <= span.endDay; spanDay++) {
+                processedDays.add(spanDay)
+            }
+        } else {
+            // Create a regular date cell
+            const dateData = monthDates.value[day - 1]
+            if (dateData) {
+                cells.push({
+                    type: 'date-cell',
+                    dateString: dateData.dateString,
+                    day: day
+                })
+            }
+        }
+    }
+
+    return cells
+}
+
+// NEW: Get grid span style for booking spans
+const getBookingSpanStyle = (dateCell: any): Record<string, string> => {
+    const isDark = props.theme === 'dark'
+    const backgroundColor = isDark && dateCell.statusConfig.darkBackgroundColor
+        ? dateCell.statusConfig.darkBackgroundColor
+        : dateCell.statusConfig.backgroundColor
+
+    return {
+        backgroundColor,
+        color: dateCell.statusConfig.color,
+        border: `1px solid ${dateCell.statusConfig.color}`,
+        borderRadius: '4px',
+        gridColumnStart: (dateCell.startDay + 1).toString(), // +1 because room column is first
+        gridColumnEnd: (dateCell.endDay + 2).toString() // +2 because grid-end is exclusive and room column is first
+    }
+}
 
 const getSpanText = (span: any): string => {
     const nights = calculateNights(span.booking.checkIn, span.booking.checkOut)
@@ -430,39 +479,7 @@ const handleSpanClick = (booking: Booking): void => {
     emit('booking-click', booking)
 }
 
-const getSpanStyleWithRow = (span: any, roomIndex: number): Record<string, string> => {
-    const isDark = props.theme === 'dark'
-    const backgroundColor = isDark && span.statusConfig.darkBackgroundColor
-        ? span.statusConfig.darkBackgroundColor
-        : span.statusConfig.backgroundColor
 
-    // Calculate position relative to entire calendar grid
-    const roomColumnWidth = 80 // Room name column width
-    const totalDays = monthDates.value.length
-    const dateColumnWidth = `calc((100% - ${roomColumnWidth}px) / ${totalDays})`
-
-    // Horizontal position
-    const left = `calc(${roomColumnWidth}px + (${span.startDay - 1} * ${dateColumnWidth}))`
-    const width = `calc(${span.length} * ${dateColumnWidth})`
-
-    // Vertical position - adjust header height
-    const rowHeight = 38 // Height of each room row (matches date-cell height)
-    const headerHeight = actualHeaderHeight.value - rowHeight + 7 // Add 7px fine-tuning to align properly
-    const top = headerHeight + (roomIndex * rowHeight) // No extra margin
-
-    return {
-        backgroundColor,
-        color: span.statusConfig.color,
-        border: `1px solid ${span.statusConfig.color}`,
-        position: 'absolute',
-        left,
-        width,
-        top: `${top}px`,
-        height: `${rowHeight}px`, // Match cell height exactly
-        zIndex: '10',
-        borderRadius: '4px'
-    }
-}
 
 // Watch for prop changes
 watch(() => props.selectedMonth, (newMonth) => {
@@ -548,9 +565,6 @@ watch(() => props.selectedMonth, (newMonth) => {
     max-height: 70vh;
     overflow-y: auto;
     overflow-x: hidden;
-    /* Remove horizontal scroll */
-    position: relative;
-    /* For absolute positioned spans */
 }
 
 .calendar-grid {
@@ -735,28 +749,34 @@ watch(() => props.selectedMonth, (newMonth) => {
     letter-spacing: 0.5px;
 }
 
-/* Booking Spans */
-.booking-span {
-    /* Absolute positioning to overlay the grid */
-    position: absolute;
+/* Booking Span Cells (Grid-based) */
+.booking-span-cell {
+    padding: 0;
+    border-right: 1px solid #f1f3f4;
+    border-bottom: 1px solid #f1f3f4;
+    height: 38px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    z-index: 20;
-    /* Higher than individual indicators (z-index: 5) */
+    min-width: 0;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    /* Remove margin to fill entire cell area */
+    /* Grid column spanning will be set via inline styles */
 }
 
-.booking-span:hover {
+.theme-dark .booking-span-cell {
+    border-color: #444;
+}
+
+.booking-span-cell:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-    z-index: 25;
+    z-index: 15;
 }
 
-.span-content {
+.booking-span-cell .span-content {
     width: 100%;
     height: 100%;
     display: flex;
@@ -765,7 +785,7 @@ watch(() => props.selectedMonth, (newMonth) => {
     padding: 0 6px;
 }
 
-.span-text {
+.booking-span-cell .span-text {
     font-size: 11px;
     font-weight: 600;
     white-space: nowrap;
