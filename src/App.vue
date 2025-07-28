@@ -22,6 +22,7 @@
         </p>
         <HotelBookingCalendar v-model="guestSelection" :availability-data="guestAvailabilityData" :base-price="85"
           currency="GBP" :show-price-calculation="true" :show-selection-errors="true" theme="light"
+          :allow-previous-month-navigation="true" :text-labels="guestCalendarLabels"
           @selection-error="handleSelectionError" @price-calculation="handlePriceCalculation"
           @book-now="handleBookNow" />
       </div>
@@ -38,7 +39,8 @@
           <br><strong>Parent handles</strong> all modals, forms, and booking management logic.
         </p>
         <HotelDashboardCalendar :rooms="sampleRooms" :bookings="sampleBookings" :selected-month="dashboardMonth"
-          :status-config="customStatusConfig" theme="light" @update:selected-month="dashboardMonth = $event"
+          :status-config="customStatusConfig" theme="light" :allow-previous-month-navigation="true" 
+          :text-labels="dashboardCalendarLabels" @update:selected-month="dashboardMonth = $event"
           @booking-click="handleBookingClick" @booking-create="handleBookingCreate" />
       </div>
 
@@ -87,13 +89,42 @@ import type {
   PriceCalculation,
   Room,
   Booking,
-  StatusConfig
+  StatusConfig,
+  CalendarTextLabels,
+  DashboardTextLabels
 } from './types'
 
 // Guest calendar state
 const guestSelection = ref<DateRange>({ checkIn: null, checkOut: null })
 const dashboardMonth = ref(new Date())
 const today = new Date()
+
+// Custom text labels for guest calendar
+const guestCalendarLabels = ref<CalendarTextLabels>({
+  previousMonth: '← Anterior',
+  nextMonth: 'Siguiente →',
+  bookingSummary: 'Resumen de Reserva',
+  nights: 'noches',
+  night: 'noche',
+  priceBreakdown: 'Desglose de precios',
+  total: 'Total',
+  bookNow: 'Reservar Ahora',
+  available: 'Disponible',
+  checkoutOnly: 'Solo Salida',
+  blocked: 'Bloqueado',
+  clearSelection: 'Limpiar selección',
+  dismissError: 'Descartar error'
+})
+
+// Custom text labels for dashboard calendar
+const dashboardCalendarLabels = ref<DashboardTextLabels>({
+  previousMonth: '← Mes Anterior',
+  nextMonth: 'Mes Siguiente →',
+  room: 'Habitación',
+  available: 'Disponible',
+  createBooking: 'Clic para crear reserva',
+  clickForDetails: 'Clic para detalles'
+})
 
 // Helper function to get dynamic dates
 const getDynamicDate = (daysFromToday: number): string => {

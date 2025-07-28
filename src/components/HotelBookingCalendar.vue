@@ -6,7 +6,7 @@
   ]">
     <div class="calendar-header">
       <button type="button" class="nav-button prev" @click="previousMonth" :disabled="!canGoPrevious"
-        :aria-label="'Previous month'">
+        :aria-label="labels.previousMonth">
         ‹
       </button>
 
@@ -17,7 +17,7 @@
       </div>
 
       <button type="button" class="nav-button next" @click="nextMonth" :disabled="!canGoNext"
-        :aria-label="'Next month'">
+        :aria-label="labels.nextMonth">
         ›
       </button>
     </div>
@@ -31,7 +31,7 @@
           Blocked dates: {{ formatBlockedDates(selectionError.blockedDates) }}
         </div>
       </div>
-      <button @click="clearSelectionError" class="error-dismiss" aria-label="Dismiss error">✕</button>
+      <button @click="clearSelectionError" class="error-dismiss" :aria-label="labels.dismissError">✕</button>
     </div>
 
     <div class="calendar-body">
@@ -71,19 +71,19 @@
     <!-- COMPACT: Price Calculation Display -->
     <div v-if="showPriceCalculation && priceCalculation" class="price-summary">
       <div class="price-summary-header">
-        <h4>Booking Summary</h4>
-        <button @click="clearSelection" class="clear-btn" aria-label="Clear selection">✕</button>
+        <h4>{{ labels.bookingSummary }}</h4>
+        <button @click="clearSelection" class="clear-btn" :aria-label="labels.clearSelection">✕</button>
       </div>
 
       <div class="price-content">
         <div class="stay-info">
-          <span class="nights">{{ priceCalculation.nights }} night{{ priceCalculation.nights !== 1 ? 's' : '' }}</span>
+          <span class="nights">{{ priceCalculation.nights }} {{ priceCalculation.nights === 1 ? labels.night : labels.nights }}</span>
           <span class="dates">{{ modelValue?.checkIn && modelValue?.checkOut ? formatDateRange(modelValue.checkIn, modelValue.checkOut) : '' }}</span>
         </div>
 
         <div v-if="priceCalculation.dailyPrices.length > 1" class="breakdown">
           <details class="breakdown-toggle">
-            <summary>Price breakdown <span class="arrow">▼</span></summary>
+            <summary>{{ labels.priceBreakdown }} <span class="arrow">▼</span></summary>
             <div class="daily-list">
               <div v-for="dailyPrice in priceCalculation.dailyPrices" :key="dailyPrice.date" class="daily-row">
                 <span>{{ formatShortDate(dailyPrice.date) }}</span>
@@ -99,13 +99,13 @@
             <span>{{ formatPrice(priceCalculation.totalPrice) }}</span>
           </div>
           <div class="total">
-            <span>Total</span>
+            <span>{{ labels.total }}</span>
             <strong>{{ formatPrice(priceCalculation.totalPrice) }}</strong>
           </div>
         </div>
 
         <button @click="handleBookNow" class="book-btn" :disabled="!priceCalculation">
-          Book Now
+          {{ labels.bookNow }}
         </button>
       </div>
     </div>
@@ -114,15 +114,15 @@
       <slot name="legend">
         <div class="legend-item">
           <div class="legend-indicator available"></div>
-          <span>Available</span>
+          <span>{{ labels.available }}</span>
         </div>
         <div class="legend-item">
           <div class="legend-indicator checkout-only"></div>
-          <span>Checkout Only</span>
+          <span>{{ labels.checkoutOnly }}</span>
         </div>
         <div class="legend-item">
           <div class="legend-indicator blocked"></div>
-          <span>Blocked</span>
+          <span>{{ labels.blocked }}</span>
         </div>
       </slot>
     </div>
@@ -139,13 +139,15 @@ const props = withDefaults(defineProps<CalendarProps>(), {
   availabilityData: () => ([]),
   locale: 'en-GB',
   disablePastDates: true,
+  allowPreviousMonthNavigation: true,
   showPrices: false,
   allowSingleDay: false,
   theme: 'light',
   basePrice: 85,
   currency: 'GBP',
   showPriceCalculation: true,
-  showSelectionErrors: true
+  showSelectionErrors: true,
+  textLabels: () => ({})
 })
 
 // Emits
@@ -231,6 +233,9 @@ const calendarDays = computed((): CalendarDay[] => {
 })
 
 const canGoPrevious = computed(() => {
+  // If allowPreviousMonthNavigation is true, always allow going to previous months
+  if (props.allowPreviousMonthNavigation) return true
+  
   if (!minDateObj.value) return true
   const prevMonth = new Date(currentDate.value)
   prevMonth.setMonth(prevMonth.getMonth() - 1)
@@ -249,6 +254,23 @@ const canGoNext = computed(() => {
   maxDate.setDate(1)
   return nextMonth <= maxDate
 })
+
+// Text labels with fallbacks
+const labels = computed(() => ({
+  previousMonth: props.textLabels?.previousMonth || 'Previous month',
+  nextMonth: props.textLabels?.nextMonth || 'Next month',
+  bookingSummary: props.textLabels?.bookingSummary || 'Booking Summary',
+  nights: props.textLabels?.nights || 'nights',
+  night: props.textLabels?.night || 'night',
+  priceBreakdown: props.textLabels?.priceBreakdown || 'Price breakdown',
+  total: props.textLabels?.total || 'Total',
+  bookNow: props.textLabels?.bookNow || 'Book Now',
+  available: props.textLabels?.available || 'Available',
+  checkoutOnly: props.textLabels?.checkoutOnly || 'Checkout Only',
+  blocked: props.textLabels?.blocked || 'Blocked',
+  clearSelection: props.textLabels?.clearSelection || 'Clear selection',
+  dismissError: props.textLabels?.dismissError || 'Dismiss error'
+}))
 
 // NEW: Price calculation computed
 const priceCalculation = computed((): PriceCalculation | null => {

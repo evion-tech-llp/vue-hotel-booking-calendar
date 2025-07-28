@@ -2,12 +2,12 @@
     <div class="hotel-dashboard-calendar" :class="`theme-${theme}`" :style="{ '--days-in-month': monthDates.length }">
         <!-- Header with Month Navigation -->
         <div class="dashboard-header" ref="calendarHeaderRef">
-            <button @click="navigateMonth(-1)" class="nav-btn" aria-label="Previous month">
-                ← Previous
+            <button @click="navigateMonth(-1)" class="nav-btn" :aria-label="labels.previousMonth">
+                {{ labels.previousMonth }}
             </button>
             <h2 class="current-month">{{ formatMonth(currentMonth) }}</h2>
-            <button @click="navigateMonth(1)" class="nav-btn" aria-label="Next month">
-                Next →
+            <button @click="navigateMonth(1)" class="nav-btn" :aria-label="labels.nextMonth">
+                {{ labels.nextMonth }}
             </button>
         </div>
 
@@ -16,7 +16,7 @@
             <div class="calendar-grid">
                 <!-- Header Row: Dates -->
                 <div class="grid-header">
-                    <div class="room-header">Room</div>
+                    <div class="room-header">{{ labels.room }}</div>
                     <div v-for="date in monthDates" :key="date.dateString" class="date-header" :class="{
                         'is-today': date.isToday,
                         'is-weekend': date.isWeekend
@@ -83,8 +83,10 @@ import type {
 
 // Props
 const props = withDefaults(defineProps<DashboardCalendarProps>(), {
-    selectedMonth: () => new Date(),
-    theme: 'light'
+  selectedMonth: () => new Date(),
+  theme: 'light',
+  allowPreviousMonthNavigation: false,
+  textLabels: () => ({})
 })
 
 // Emits
@@ -161,8 +163,18 @@ const defaultStatusConfig: StatusConfig[] = [
 
 // Computed Properties
 const availableStatuses = computed(() =>
-    props.statusConfig || defaultStatusConfig
+  props.statusConfig || defaultStatusConfig
 )
+
+// Text labels with fallbacks
+const labels = computed(() => ({
+  previousMonth: props.textLabels?.previousMonth || '← Previous',
+  nextMonth: props.textLabels?.nextMonth || 'Next →',
+  room: props.textLabels?.room || 'Room',
+  available: props.textLabels?.available || 'Available',
+  createBooking: props.textLabels?.createBooking || 'Click to create booking',
+  clickForDetails: props.textLabels?.clickForDetails || 'Click for details'
+}))
 
 const monthDates = computed(() => {
     const year = currentMonth.value.getFullYear()
@@ -269,10 +281,20 @@ const formatMonth = (date: Date): string => {
 }
 
 const navigateMonth = (direction: number): void => {
-    const newMonth = new Date(currentMonth.value)
-    newMonth.setMonth(newMonth.getMonth() + direction)
-    currentMonth.value = newMonth
-    emit('update:selectedMonth', newMonth)
+  // Allow navigation to previous months if allowPreviousMonthNavigation is true
+  if (direction < 0 && !props.allowPreviousMonthNavigation) {
+    const today = new Date()
+    const currentMonthStart = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1)
+    const todayMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    
+    // Don't allow going to months before current month unless explicitly allowed
+    if (currentMonthStart <= todayMonthStart) return
+  }
+  
+  const newMonth = new Date(currentMonth.value)
+  newMonth.setMonth(newMonth.getMonth() + direction)
+  currentMonth.value = newMonth
+  emit('update:selectedMonth', newMonth)
 }
 
 const hasBooking = (room: Room, dateString: string): boolean => {
@@ -350,12 +372,12 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
 }
 
 const getCellTooltip = (room: Room, dateString: string): string => {
-    const booking = getBookingForRoomAndDate(room, dateString)
-    if (!booking) return `Room ${room.number} - Available (Click to create booking)`
+  const booking = getBookingForRoomAndDate(room, dateString)
+  if (!booking) return `${labels.value.room} ${room.number} - ${labels.value.available} (${labels.value.createBooking})`
 
-    const statusConfig = getStatusConfig(booking.status)
-    const nights = calculateNights(booking.checkIn, booking.checkOut)
-    return `${booking.guestName} - Room ${room.number} - ${statusConfig.label} - ${nights} nights (Click for details)`
+  const statusConfig = getStatusConfig(booking.status)
+  const nights = calculateNights(booking.checkIn, booking.checkOut)
+  return `${booking.guestName} - ${labels.value.room} ${room.number} - ${statusConfig.label} - ${nights} nights (${labels.value.clickForDetails})`
 }
 
 const handleCellClick = (room: Room, dateString: string): void => {

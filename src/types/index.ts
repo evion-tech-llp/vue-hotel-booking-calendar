@@ -41,6 +41,23 @@ export interface CalendarDay {
   availability?: DateAvailability
 }
 
+// Custom text labels for the booking calendar
+export interface CalendarTextLabels {
+  previousMonth?: string
+  nextMonth?: string
+  bookingSummary?: string
+  nights?: string
+  night?: string
+  priceBreakdown?: string
+  total?: string
+  bookNow?: string
+  available?: string
+  checkoutOnly?: string
+  blocked?: string
+  clearSelection?: string
+  dismissError?: string
+}
+
 // Guest Calendar Props
 export interface CalendarProps {
   modelValue: DateRange
@@ -49,6 +66,7 @@ export interface CalendarProps {
   maxDate?: string | Date
   locale?: string
   disablePastDates?: boolean
+  allowPreviousMonthNavigation?: boolean
   showPrices?: boolean
   allowSingleDay?: boolean
   theme?: 'light' | 'dark'
@@ -56,6 +74,7 @@ export interface CalendarProps {
   currency?: string
   showPriceCalculation?: boolean
   showSelectionErrors?: boolean
+  textLabels?: CalendarTextLabels
 }
 
 // Guest Calendar Emits
@@ -94,6 +113,16 @@ export interface StatusConfig {
   darkBackgroundColor?: string
 }
 
+// Custom text labels for the dashboard calendar
+export interface DashboardTextLabels {
+  previousMonth?: string
+  nextMonth?: string
+  room?: string
+  available?: string
+  createBooking?: string
+  clickForDetails?: string
+}
+
 // Dashboard Calendar Props
 export interface DashboardCalendarProps {
   rooms: Room[]
@@ -101,6 +130,8 @@ export interface DashboardCalendarProps {
   selectedMonth?: Date
   theme?: 'light' | 'dark'
   statusConfig?: StatusConfig[]
+  allowPreviousMonthNavigation?: boolean
+  textLabels?: DashboardTextLabels
 }
 
 // Dashboard Calendar Emits
