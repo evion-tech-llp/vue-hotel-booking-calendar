@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.7] - 2025-01-24
+
+### 🐛 Bug Fixes
+
+**📱 Mobile View Improvements:**
+- ✅ Fixed text color issue in mobile dashboard calendar light theme
+- ✅ Improved style inheritance for date cells
+- ✅ Better handling of booking status styles
+- ✅ Enhanced theme consistency across views
+
 ## [1.0.6] - 2025-01-24
 
 ### 📱 Mobile Responsiveness Improvements

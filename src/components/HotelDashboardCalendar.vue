@@ -112,7 +112,7 @@
                                     getCellClasses(room, date.dateString),
                                     { 'other-month': date.date.getMonth() !== currentMonth.getMonth() }
                                 ]" 
-                                :style="getCellStyle(room, date.dateString)"
+                                :style="hasBooking(room, date.dateString) ? getCellStyle(room, date.dateString) : {}"
                                 @click="handleCellClick(room, date.dateString)">
                                 <div class="mobile-date-number">{{ date.day }}</div>
                                 <div v-if="hasBooking(room, date.dateString)" class="mobile-booking-indicator">
@@ -1200,6 +1200,7 @@ watch(() => props.selectedMonth, (newMonth) => {
 .mobile-date-number {
     font-size: 14px;
     font-weight: 500;
+    color: inherit;  /* Ensure date number inherits color from parent */
 }
 
 .mobile-booking-indicator {

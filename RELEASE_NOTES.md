@@ -2,6 +2,25 @@
 
 ## Latest Release
 
+### Version 1.0.7 - Mobile View Bug Fixes
+
+🎯 **Focus**: Improved mobile theme consistency and style handling
+
+#### 🐛 Bug Fixes
+
+**📱 Mobile View Improvements:**
+- ✅ Fixed text color issue in mobile dashboard calendar light theme
+- ✅ Improved style inheritance for date cells
+- ✅ Better handling of booking status styles
+- ✅ Enhanced theme consistency across views
+
+#### 🔧 Technical Details
+
+- Optimized style application for mobile date cells
+- Improved conditional style handling for bookings
+- Enhanced theme inheritance for better maintainability
+- Fixed explicit color overrides in light theme
+
 ### Version 1.0.6 - Mobile Experience Enhancement
 
 🎯 **Focus**: Improved mobile responsiveness and touch interaction
