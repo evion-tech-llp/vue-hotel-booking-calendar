@@ -3,16 +3,18 @@
         <!-- Header with Month Navigation -->
         <div class="dashboard-header">
             <button @click="navigateMonth(-1)" class="nav-btn" :aria-label="labels.previousMonth">
-                {{ labels.previousMonth }}
+                <span class="nav-text">{{ labels.previousMonth }}</span>
+                <span class="nav-arrow">←</span>
             </button>
             <h2 class="current-month">{{ formatMonth(currentMonth) }}</h2>
             <button @click="navigateMonth(1)" class="nav-btn" :aria-label="labels.nextMonth">
-                {{ labels.nextMonth }}
+                <span class="nav-text">{{ labels.nextMonth }}</span>
+                <span class="nav-arrow">→</span>
             </button>
         </div>
 
-        <!-- Calendar Grid -->
-        <div class="calendar-container">
+        <!-- Desktop Calendar Grid -->
+        <div class="calendar-container desktop-view">
             <div class="calendar-grid">
                 <!-- Header Row: Dates -->
                 <div class="grid-header">
@@ -57,6 +59,70 @@
                             </div>
                         </div>
                     </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Calendar View -->
+        <div class="calendar-container mobile-view">
+            <div v-for="room in props.rooms" :key="room.id" class="mobile-room-calendar">
+                <div class="mobile-room-header">
+                    <h3>{{ labels.room }} {{ room.number }}</h3>
+                </div>
+                <div class="mobile-calendar-grid">
+                    <!-- Mobile Weekdays Header -->
+                    <div class="mobile-weekdays">
+                        <div v-for="date in monthDates.slice(0, 7)" :key="date.dateString" class="mobile-weekday">
+                            {{ date.weekday }}
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Days Grid -->
+                    <div class="mobile-days">
+                        <!-- Empty cells for proper alignment -->
+                        <template v-for="i in getFirstDayOffset" :key="`empty-${i}`">
+                            <div class="mobile-date-cell empty"></div>
+                        </template>
+
+                        <!-- Actual date cells -->
+                        <template v-for="date in monthDates" :key="date.dateString">
+                            <template v-if="hasBookingSpan(room, date.day)">
+                                <div v-for="spanSegment in getBookingSpanSegments(room, date)"
+                                    :key="spanSegment.row"
+                                    class="mobile-booking-span"
+                                    :class="[
+                                        getCellClasses(room, date.dateString),
+                                        {
+                                            'span-start': spanSegment.isStart,
+                                            'span-end': spanSegment.isEnd,
+                                            'span-middle': !spanSegment.isStart && !spanSegment.isEnd
+                                        }
+                                    ]"
+                                    :style="spanSegment.style">
+                                    <div class="mobile-span-content">
+                                        <span class="mobile-span-text">
+                                            {{ spanSegment.isStart ? getSpanText(getBookingSpanForDate(room, date)) : '' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                            <div v-else 
+                                class="mobile-date-cell"
+                                :class="[
+                                    getCellClasses(room, date.dateString),
+                                    { 'other-month': !date.isCurrentMonth }
+                                ]" 
+                                :style="getCellStyle(room, date.dateString)"
+                                @click="handleCellClick(room, date.dateString)">
+                                <div class="mobile-date-number">{{ date.day }}</div>
+                                <div v-if="hasBooking(room, date.dateString)" class="mobile-booking-indicator">
+                                    <span class="mobile-guest-initials">
+                                        {{ getGuestInitials(room, date.dateString) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
@@ -479,6 +545,170 @@ const handleSpanClick = (booking: Booking): void => {
     emit('booking-click', booking)
 }
 
+// NEW: Get first day offset for grid alignment
+const getFirstDayOffset = computed(() => {
+    if (monthDates.value.length === 0) return 0
+    const firstDate = new Date(monthDates.value[0].dateString)
+    return firstDate.getDay() // 0 (Sunday) to 6 (Saturday)
+})
+
+// NEW: Get booking span for a specific date
+const getBookingSpanForDate = (room: Room, date: any) => {
+    const spans = bookingSpans.value[room.id] || []
+    return spans.find(span => 
+        date.day >= span.startDay && 
+        date.day <= span.endDay
+    )
+}
+
+// NEW: Get booking span segments for multi-row spans
+const getBookingSpanSegments = (room: Room, date: any) => {
+    const span = getBookingSpanForDate(room, date)
+    if (!span) return []
+
+    const startPos = getGridPosition(span.startDay)
+    const endPos = getGridPosition(span.endDay)
+    const currentPos = getGridPosition(date.day)
+    const segments = []
+
+    const isDark = props.theme === 'dark'
+    const backgroundColor = isDark && span.statusConfig.darkBackgroundColor
+        ? span.statusConfig.darkBackgroundColor
+        : span.statusConfig.backgroundColor
+
+    const baseStyle = {
+        backgroundColor,
+        color: span.statusConfig.color,
+        border: `1px solid ${span.statusConfig.color}`,
+        zIndex: '1'
+    }
+
+    // Calculate if this date is at a week boundary
+    const isWeekStart = currentPos.column === 1
+    const isWeekEnd = currentPos.column === 7
+    const isSpanStart = date.day === span.startDay
+    const isSpanEnd = date.day === span.endDay
+
+    // If it's a single row span
+    if (startPos.row === endPos.row) {
+        segments.push({
+            row: startPos.row,
+            isStart: true,
+            isEnd: true,
+            style: {
+                ...baseStyle,
+                gridColumn: `${startPos.column} / ${endPos.column + 1}`,
+                gridRow: `${startPos.row}`,
+                borderRadius: '6px'
+            }
+        })
+        return segments
+    }
+
+    // Handle multi-row spans
+    if (isSpanStart || (isWeekStart && currentPos.row > startPos.row)) {
+        // Start of span or start of week
+        const endColumn = isSpanStart ? 8 : (isSpanEnd ? endPos.column + 1 : 8)
+        segments.push({
+            row: currentPos.row,
+            isStart: isSpanStart,
+            isEnd: isSpanEnd,
+            style: {
+                ...baseStyle,
+                gridColumn: `${isSpanStart ? startPos.column : 1} / ${endColumn}`,
+                gridRow: `${currentPos.row}`,
+                borderRadius: getBorderRadius(isSpanStart, isSpanEnd, isWeekStart, isWeekEnd)
+            }
+        })
+    } else if (isSpanEnd || (isWeekEnd && currentPos.row < endPos.row)) {
+        // End of span or end of week
+        segments.push({
+            row: currentPos.row,
+            isStart: false,
+            isEnd: isSpanEnd,
+            style: {
+                ...baseStyle,
+                gridColumn: `1 / ${isSpanEnd ? endPos.column + 1 : 8}`,
+                gridRow: `${currentPos.row}`,
+                borderRadius: getBorderRadius(false, isSpanEnd, isWeekStart, isWeekEnd)
+            }
+        })
+    } else if (currentPos.row > startPos.row && currentPos.row < endPos.row) {
+        // Middle of span
+        segments.push({
+            row: currentPos.row,
+            isStart: false,
+            isEnd: false,
+            style: {
+                ...baseStyle,
+                gridColumn: '1 / 8',
+                gridRow: `${currentPos.row}`,
+                borderRadius: '0'
+            }
+        })
+    }
+
+    return segments
+}
+
+// Helper function to determine border radius based on position
+const getBorderRadius = (isStart: boolean, isEnd: boolean, isWeekStart: boolean, isWeekEnd: boolean): string => {
+    if (isStart && isEnd) return '6px'
+    if (isStart) return '6px 0 0 6px'
+    if (isEnd) return '0 6px 6px 0'
+    if (isWeekStart) return '6px 0 0 6px'
+    if (isWeekEnd) return '0 6px 6px 0'
+    return '0'
+}
+
+// NEW: Calculate grid position for a date
+const getGridPosition = (date: number) => {
+    const firstDayOffset = getFirstDayOffset.value
+    const position = firstDayOffset + date - 1
+    return {
+        row: Math.floor(position / 7) + 1,
+        column: (position % 7) + 1
+    }
+}
+
+// NEW: Get style for mobile booking spans
+const getMobileBookingStyle = (span: any): Record<string, string> => {
+    if (!span) return {}
+
+    const isDark = props.theme === 'dark'
+    const backgroundColor = isDark && span.statusConfig.darkBackgroundColor
+        ? span.statusConfig.darkBackgroundColor
+        : span.statusConfig.backgroundColor
+
+    // Get grid positions for start and end dates
+    const startPos = getGridPosition(span.startDay)
+    const endPos = getGridPosition(span.endDay)
+    
+    // If span is in the same row
+    if (startPos.row === endPos.row) {
+        return {
+            backgroundColor,
+            color: span.statusConfig.color,
+            border: `1px solid ${span.statusConfig.color}`,
+            gridColumn: `${startPos.column} / ${endPos.column + 1}`,
+            gridRow: `${startPos.row}`,
+            zIndex: '1'
+        }
+    }
+    
+    // For multi-row spans, create separate spans for each row
+    const currentRow = startPos.row
+    const lastColumn = 7
+    
+    return {
+        backgroundColor,
+        color: span.statusConfig.color,
+        border: `1px solid ${span.statusConfig.color}`,
+        gridColumn: `${startPos.column} / ${lastColumn + 1}`,
+        gridRow: `${currentRow}`,
+        zIndex: '1'
+    }
+}
 
 
 // Watch for prop changes
@@ -530,11 +760,35 @@ watch(() => props.selectedMonth, (newMonth) => {
     font-weight: 500;
     transition: all 0.2s ease;
     color: #495057;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    position: relative;
 }
 
 .nav-btn:hover {
     background: #f8f9fa;
     border-color: #dee2e6;
+}
+
+.nav-text {
+    display: block;
+}
+
+.nav-arrow {
+    display: none;  /* Hidden by default for desktop */
+    font-size: 20px;
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .theme-dark .nav-btn {
@@ -545,6 +799,23 @@ watch(() => props.selectedMonth, (newMonth) => {
 
 .theme-dark .nav-btn:hover {
     background: #404040;
+}
+
+@media (max-width: 768px) {
+    .nav-text {
+        display: none;
+    }
+    
+    .nav-arrow {
+        display: flex;
+    }
+    
+    .nav-btn {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        margin: 0 4px;
+    }
 }
 
 .current-month {
@@ -830,59 +1101,196 @@ watch(() => props.selectedMonth, (newMonth) => {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+/* Mobile Calendar Styles */
+.mobile-view {
+    display: none;
+}
+
+.mobile-room-calendar {
+    background: white;
+    border-radius: 8px;
+    margin: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.theme-dark .mobile-room-calendar {
+    background: #2d2d2d;
+}
+
+.mobile-room-header {
+    padding: 16px;
+    border-bottom: 1px solid #f1f3f4;
+    background: #f8f9fa;
+}
+
+.theme-dark .mobile-room-header {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+.mobile-room-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+.theme-dark .mobile-room-header h3 {
+    color: #f8fafc;
+}
+
+.mobile-calendar-grid {
+    padding: 12px;
+}
+
+.mobile-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.mobile-weekday {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #718096;
+    padding: 4px;
+}
+
+.theme-dark .mobile-weekday {
+    color: #a0aec0;
+}
+
+.mobile-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    grid-auto-rows: minmax(40px, auto);
+}
+
+.mobile-date-cell {
+    aspect-ratio: 1;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    min-height: 40px;
+    background: white;
+}
+
+.theme-dark .mobile-date-cell {
+    background: #1e1e1e;
+}
+
+.mobile-date-cell.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.mobile-date-cell.other-month {
+    opacity: 0.5;
+}
+
+.mobile-date-number {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.mobile-booking-indicator {
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.mobile-booking-span {
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.mobile-booking-span:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-booking-span.span-start {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    margin-left: 2px;
+}
+
+.mobile-booking-span.span-end {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+    margin-right: 2px;
+}
+
+.mobile-span-content {
+    width: 100%;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 4px;
+}
+
+.span-start .mobile-span-content {
+    padding-left: 8px;
+}
+
+.span-end .mobile-span-content {
+    padding-right: 8px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+    .desktop-view {
+        display: none;
+    }
+
+    .mobile-view {
+        display: block;
+    }
+
     .dashboard-header {
-        padding: 16px 20px;
+        padding: 16px;
     }
 
     .nav-btn {
-        padding: 8px 14px;
+        padding: 8px 12px;
         font-size: 13px;
     }
 
     .current-month {
-        font-size: 18px;
-    }
-
-    .calendar-grid {
-        grid-template-columns: 60px repeat(var(--days-in-month), 1fr);
-    }
-
-    .room-header,
-    .room-name {
-        padding: 8px 2px;
-        font-size: 11px;
-    }
-
-    .date-header {
-        padding: 6px 1px;
-        font-size: 10px;
-    }
-
-    .date-number {
-        font-size: 10px;
-    }
-
-    .date-weekday {
-        font-size: 8px;
-    }
-
-    .date-cell {
-        height: 34px;
+        font-size: 16px;
     }
 
     .legend {
-        padding: 16px 20px;
-        gap: 16px;
+        padding: 12px 16px;
+        gap: 12px;
     }
 
     .legend-item {
-        font-size: 12px;
+        font-size: 11px;
     }
 
-    .guest-initials {
-        font-size: 9px;
+    .legend-color {
+        width: 14px;
+        height: 14px;
     }
 }
 </style>
