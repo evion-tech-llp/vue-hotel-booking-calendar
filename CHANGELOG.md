@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2025-01-24
+
+### 📱 Mobile Responsiveness Improvements
+
+**🔄 Enhanced Mobile Navigation:**
+- ✅ Simplified mobile navigation with arrow-only buttons
+- ✅ Better touch targets for navigation controls
+- ✅ Improved button centering and alignment
+- ✅ Cleaner mobile interface with reduced text
+
+**📊 Dashboard Calendar Mobile View:**
+- ✅ New vertical stack layout for room calendars on mobile
+- ✅ Improved booking span handling across weeks
+- ✅ Better grid alignment for dates and bookings
+- ✅ Enhanced visual separation between rooms
+- ✅ Optimized spacing and touch targets
+- ✅ Proper handling of multi-row booking spans
+
+**🎨 Visual Refinements:**
+- ✅ Better responsive breakpoints
+- ✅ Improved dark theme support for mobile
+- ✅ Enhanced accessibility for touch devices
+- ✅ Smoother transitions between views
+
+**🔧 Technical Improvements:**
+- ✅ Refactored grid layout system
+- ✅ Better handling of week boundaries
+- ✅ Improved date alignment across views
+- ✅ Enhanced booking span calculations
+
 ## [1.0.5] - 2025-01-23
 
 ### 🆕 Enhanced Customization & Navigation Features

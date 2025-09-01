@@ -1,215 +1,121 @@
-# Release Notes - Vue Hotel Booking Calendar v1.0.5
+# Release Notes
 
-_Released: January 23, 2025_
+## Latest Release
 
-## 🎉 **Enhanced Customization & Navigation Release**
+### Version 1.0.6 - Mobile Experience Enhancement
 
-We're excited to announce Vue Hotel Booking Calendar v1.0.5 - a significant enhancement focused on customization, navigation flexibility, and improved architecture. This release makes the components more accessible, international-ready, and developer-friendly.
+🎯 **Focus**: Improved mobile responsiveness and touch interaction
 
----
+#### 🆕 New Features
 
-## 🌟 **Highlights**
+**📱 Enhanced Mobile Navigation:**
+- ✅ Simplified arrow-only navigation on mobile
+- ✅ Optimized touch targets
+- ✅ Better button centering and alignment
+- ✅ Cleaner mobile interface with reduced text
 
-### 🎨 **Complete Custom Text Labels System**
+**📊 Dashboard Calendar Mobile View:**
+- ✅ New vertical stack layout for room calendars
+- ✅ Full-width calendar view per room
+- ✅ Better handling of booking spans across weeks
+- ✅ Enhanced visual separation between rooms
+- ✅ Proper grid alignment on all screen sizes
 
-Transform your calendar interface with fully customizable text labels - perfect for internationalization or simplified user experiences:
+**🎨 Visual Refinements:**
+- ✅ Improved responsive breakpoints
+- ✅ Better dark theme support for mobile
+- ✅ Enhanced accessibility for touch devices
+- ✅ Smoother transitions between views
 
+**🔧 Technical Improvements:**
+- ✅ Refactored grid layout system
+- ✅ Better handling of week boundaries
+- ✅ Improved date alignment across views
+- ✅ Enhanced booking span calculations
+
+#### 🛠️ Technical Details
+
+**📱 Mobile-Optimized Example:**
 ```vue
-<HotelBookingCalendar
-  v-model="dates"
-  :text-labels="{
-    previousMonth: '← Back',
-    nextMonth: 'Forward →',
-    bookingSummary: 'Your Stay',
-    bookNow: 'Book This Stay',
-    available: 'Open',
-    blocked: 'Not Available'
-  }"
-/>
+<template>
+  <HotelDashboardCalendar
+    :rooms="rooms"
+    :bookings="bookings"
+    :text-labels="{
+      previousMonth: '←',
+      nextMonth: '→'
+    }"
+  />
+</template>
 ```
 
-**What's New:**
+#### 🎨 Mobile Design Features
 
-- **Full label customization** for all UI elements
-- **Type-safe implementation** with complete TypeScript interfaces
-- **Fallback system** - Uses sensible defaults when labels aren't provided
-- **Both calendars supported** - Guest booking and hotel dashboard calendars
+**Guest Calendar:**
+- Simplified navigation controls
+- Optimized touch targets
+- Improved date selection
+- Clean, uncluttered interface
 
-### 📅 **Enhanced Navigation Control**
-
-Give users more flexibility with improved navigation options:
-
-```vue
-<HotelBookingCalendar
-  v-model="dates"
-  :allow-previous-month-navigation="true"
-  :disable-past-dates="true"
-/>
-```
-
-**Key Benefits:**
-
-- **View historical data** without breaking booking rules
-- **Better user experience** for exploring past months
-- **Flexible date restrictions** - Navigation and selection can have different rules
-
-### 🏗️ **Dashboard Calendar Architecture Upgrade**
-
-**Booking Spans Now Use CSS Grid (Breaking Change for Custom CSS):**
-
-- **Before**: Absolute positioned overlays with complex calculations
-- **After**: Native CSS grid column spans - cleaner, faster, more accessible
-
-**Benefits:**
-
-- ✅ **60% less positioning code** - Simplified and more maintainable
-- ✅ **Better performance** - No manual positioning calculations
-- ✅ **Improved accessibility** - Screen readers understand grid structure
-- ✅ **More semantic HTML** - Booking spans are actual grid items
+**Dashboard Calendar:**
+- Vertical room layout
+- Full-width calendars
+- Better booking visualization
+- Enhanced touch interaction
 
 ---
 
-## 📦 **New Props Reference**
+### Version 1.0.5 - Enhanced Customization & Navigation
 
-### HotelBookingCalendar
+🎯 **Focus**: Custom text labels and flexible navigation control
 
+#### 🆕 New Features
+
+**🎨 Custom Text Labels System:**
+- ✅ Fully customizable text labels for all UI elements
+- ✅ Perfect for internationalization and custom terminology
+- ✅ Complete coverage of all interface text
+- ✅ Smart fallback system with English defaults
+- ✅ Type-safe implementation with TypeScript interfaces
+
+**📅 Enhanced Navigation Control:**
+- ✅ New `allowPreviousMonthNavigation` prop
+- ✅ Flexible past month access
+- ✅ Better historical data viewing
+- ✅ Maintains date selection rules
+
+**🏗️ Dashboard Calendar Architecture:**
+- ✅ Refactored to CSS Grid spans
+- ✅ More semantic HTML structure
+- ✅ Better performance and accessibility
+- ✅ Cleaner, more maintainable code
+
+#### 🛠️ Technical Details
+
+**📦 New Props:**
 ```typescript
-interface CalendarProps {
-  // ... existing props
-  allowPreviousMonthNavigation?: boolean
-  textLabels?: CalendarTextLabels
-}
-
-interface CalendarTextLabels {
-  previousMonth?: string        // Default: "Previous month"
-  nextMonth?: string           // Default: "Next month"
-  bookingSummary?: string      // Default: "Booking Summary"
-  nights?: string              // Default: "nights"
-  night?: string               // Default: "night"
-  priceBreakdown?: string      // Default: "Price breakdown"
-  total?: string               // Default: "Total"
-  bookNow?: string             // Default: "Book Now"
-  available?: string           // Default: "Available"
-  checkoutOnly?: string        // Default: "Checkout Only"
-  blocked?: string             // Default: "Blocked"
-  clearSelection?: string      // Default: "Clear selection"
-  dismissError?: string        // Default: "Dismiss error"
-}
+// Both calendars
+allowPreviousMonthNavigation?: boolean  // Default: false
+textLabels?: CalendarTextLabels | DashboardTextLabels  // Default: {}
 ```
 
-### HotelDashboardCalendar
-
-```typescript
-interface DashboardCalendarProps {
-  // ... existing props
-  allowPreviousMonthNavigation?: boolean
-  textLabels?: DashboardTextLabels
-}
-
-interface DashboardTextLabels {
-  previousMonth?: string       // Default: "← Previous"
-  nextMonth?: string          // Default: "Next →"
-  room?: string               // Default: "Room"
-  available?: string          // Default: "Available"
-  createBooking?: string      // Default: "Click to create booking"
-  clickForDetails?: string    // Default: "Click for details"
-}
-```
-
----
-
-## 🚀 **Getting Started with v1.0.5**
-
-### Installation
-
-```bash
-npm install vue-hotel-booking-calendar@latest
-```
-
-### Basic Usage with Custom Labels
-
+**🎯 Usage Example:**
 ```vue
 <template>
   <HotelBookingCalendar
-    v-model="selection"
-    :availability-data="availability"
     :allow-previous-month-navigation="true"
     :text-labels="{
       bookNow: 'Reserve Now',
       available: 'Open',
       previousMonth: '← Back'
     }"
-    @book-now="handleBooking"
   />
 </template>
-
-<script setup>
-import { HotelBookingCalendar } from 'vue-hotel-booking-calendar'
-import 'vue-hotel-booking-calendar/dist/style.css'
-
-const selection = ref({ checkIn: null, checkOut: null })
-const availability = ref([
-  { date: '2025-01-25', status: 'available', price: 120 },
-  { date: '2025-01-26', status: 'blocked' }
-])
-
-const handleBooking = (data) => {
-  console.log('Booking request:', data)
-}
-</script>
 ```
 
----
+#### 🎨 Design Improvements
 
-## 🔄 **Migration Guide from v1.0.4**
-
-### ✅ **Fully Backward Compatible**
-
-- All existing props and functionality remain unchanged
-- New props are optional with sensible defaults
-- No breaking changes for component usage
-
-### 🎨 **Dashboard Calendar CSS (Optional Update)**
-
-If you have custom CSS targeting booking spans:
-
-```css
-/* OLD - Still works but deprecated */
-.booking-span { /* custom styles */ }
-
-/* NEW - Recommended for v1.0.5+ */
-.booking-span-cell { /* custom styles */ }
-```
-
-The old class still works, but the new `.booking-span-cell` provides better integration with the grid system.
-
----
-
-## 🐛 **Bug Fixes & Improvements**
-
-- **Fixed**: Grid span positioning edge cases in dashboard calendar
-- **Improved**: Type definitions for better IDE support
-- **Enhanced**: Demo application with simplified language examples
-- **Optimized**: Reduced bundle size by removing unused positioning utilities
-
----
-
-## 📈 **Performance Improvements**
-
-- **30% faster rendering** for dashboard calendar with many bookings
-- **Reduced memory usage** by eliminating positioning calculations
-- **Better scroll performance** with native grid behavior
-
----
-
-## 🤝 **Community & Support**
-
-- **GitHub**: [vue-hotel-booking-calendar](https://github.com/your-repo/vue-hotel-booking-calendar)
-- **Documentation**: Full API documentation and examples
-- **Issues**: Bug reports and feature requests welcome
-
----
-
-**Happy coding! 🎉**
-
-The Vue Hotel Booking Calendar Team
+- Better visual hierarchy
+- Enhanced accessibility
+- Smoother transitions
+- More consistent spacing

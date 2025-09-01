@@ -40,15 +40,46 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 📅 **Flexible Navigation** - Optional previous month navigation for historical data  
 🔧 **Highly Customizable** - Extensive props and styling options
 
-## 🆕 What's New in v1.0.5
+## 🆕 What's New in v1.0.6
 
-- ✅ **Custom Text Labels System** - Fully customizable text for all UI elements, perfect for internationalization
-- ✅ **Enhanced Navigation Control** - New `allowPreviousMonthNavigation` prop for flexible month navigation
-- ✅ **Grid-Based Architecture** - Dashboard calendar now uses CSS Grid spans for better performance and accessibility
-- ✅ **Improved Type Safety** - Enhanced TypeScript interfaces for new customization options
-- ✅ **Better Accessibility** - Screen readers can better understand the booking span structure
-- ✅ **Simplified Language Demo** - Example implementation with user-friendly terminology
-- ✅ **Performance Improvements** - 30% faster rendering for dashboard with native grid behavior
+- ✅ **Enhanced Mobile Navigation** - Simplified arrow-only navigation on mobile devices
+- ✅ **Improved Mobile Dashboard** - New vertical stack layout for room calendars on small screens
+- ✅ **Better Booking Spans** - Enhanced handling of bookings that span multiple weeks
+- ✅ **Responsive Refinements** - Better grid alignment and touch targets for mobile users
+- ✅ **Technical Improvements** - Refactored grid system and booking span calculations
+- ✅ **Mobile-First Updates** - Optimized spacing and visual separation for small screens
+
+## 📱 Mobile Responsiveness
+
+Both components are now even more mobile-friendly with specific optimizations:
+
+### Guest Calendar Mobile Features:
+- Simplified arrow-only navigation buttons on mobile
+- Optimized touch targets for better interaction
+- Improved date selection on touch devices
+- Clean, uncluttered mobile interface
+
+### Dashboard Calendar Mobile Features:
+- Vertical stack layout for room calendars on mobile
+- Each room gets full-width calendar view
+- Better handling of booking spans across weeks
+- Enhanced visual separation between rooms
+- Optimized for touch interaction
+- Proper grid alignment on all screen sizes
+
+```vue
+<template>
+  <!-- Mobile-optimized dashboard -->
+  <HotelDashboardCalendar
+    :rooms="rooms"
+    :bookings="bookings"
+    :text-labels="{
+      previousMonth: '←',  // Simplified mobile navigation
+      nextMonth: '→'
+    }"
+  />
+</template>
+```
 
 ## 📦 Installation
 
