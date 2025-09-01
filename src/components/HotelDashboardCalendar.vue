@@ -110,7 +110,7 @@
                                 class="mobile-date-cell"
                                 :class="[
                                     getCellClasses(room, date.dateString),
-                                    { 'other-month': !date.isCurrentMonth }
+                                    { 'other-month': date.date.getMonth() !== currentMonth.getMonth() }
                                 ]" 
                                 :style="getCellStyle(room, date.dateString)"
                                 @click="handleCellClick(room, date.dateString)">
