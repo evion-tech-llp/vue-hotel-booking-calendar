@@ -35,13 +35,11 @@
     </div>
 
     <div class="calendar-body">
-      <div class="weekdays">
+      <div class="calendar-grid-container">
         <div v-for="day in weekdays" :key="day" class="weekday">
           {{ day }}
         </div>
-      </div>
 
-      <div class="days-grid">
         <div v-for="day in calendarDays" :key="day.dateString" class="day-cell" :class="{
           'other-month': !day.isCurrentMonth,
           'today': day.isToday,
@@ -571,12 +569,15 @@ watch(priceCalculation, (newCalculation) => {
 
 <style scoped>
 .hotel-booking-calendar {
+  width: 100%;
   max-width: 400px;
+  min-width: 280px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   background: white;
+  margin: 0 auto;
 }
 
 .theme-dark {
@@ -588,9 +589,10 @@ watch(priceCalculation, (newCalculation) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: clamp(12px, 3vw, 16px);
   background: #f7fafc;
   border-bottom: 1px solid #e2e8f0;
+  min-height: 60px;
 }
 
 .theme-dark .calendar-header {
@@ -625,27 +627,37 @@ watch(priceCalculation, (newCalculation) => {
 
 .month-year h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: clamp(16px, 4vw, 18px);
   font-weight: 600;
+  white-space: nowrap;
+  padding: 0 4px;
 }
 
 .calendar-body {
   padding: 16px;
 }
 
-.weekdays {
+.calendar-grid-container {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  width: 100%;
+  gap: 2px;
+}
+
+.weekdays {
+  display: contents;
 }
 
 .weekday {
   text-align: center;
-  font-size: 12px;
+  font-size: clamp(10px, 3vw, 12px);
   font-weight: 600;
   color: #718096;
-  padding: 8px 4px;
+  padding: 4px 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
 }
 
 .theme-dark .weekday {
@@ -653,9 +665,7 @@ watch(priceCalculation, (newCalculation) => {
 }
 
 .days-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  display: contents;
 }
 
 .day-cell {
@@ -667,8 +677,11 @@ watch(priceCalculation, (newCalculation) => {
   cursor: pointer;
   border-radius: 6px;
   transition: all 0.2s;
-  min-height: 44px;
+  height: clamp(36px, 10vw, 44px);
   color: #374151;
+  padding: 2px;
+  margin: 1px;
+  grid-column: auto;
 }
 
 .theme-dark .day-cell {
@@ -721,16 +734,21 @@ watch(priceCalculation, (newCalculation) => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   z-index: 1;
+  width: 100%;
+  height: 100%;
 }
 
 .day-number {
-  font-size: 14px;
+  font-size: clamp(12px, 3.5vw, 14px);
+  line-height: 1.2;
 }
 
 .day-price {
-  font-size: 10px;
-  margin-top: 2px;
+  font-size: clamp(8px, 2.5vw, 10px);
+  margin-top: 1px;
+  line-height: 1;
 }
 
 .status-indicator {
