@@ -34,22 +34,18 @@
                     <div class="room-name">{{ room.number }}</div>
 
                     <!-- Date Cells with Grid Spans -->
-                    <template v-for="(dateCell, cellIndex) in getGridCellsForRoom(room)" :key="`${room.id}-${cellIndex}`">
-                        <div v-if="dateCell.type === 'booking-span'" 
-                            class="booking-span-cell"
-                            :class="getCellClasses(room, dateCell.startDate)"
-                            :style="getBookingSpanStyle(dateCell)"
-                            @click="handleSpanClick(dateCell.booking)" 
-                            :title="getSpanTooltip(dateCell)">
+                    <template v-for="(dateCell, cellIndex) in getGridCellsForRoom(room)"
+                        :key="`${room.id}-${cellIndex}`">
+                        <div v-if="dateCell.type === 'booking-span'" class="booking-span-cell"
+                            :class="getCellClasses(room, dateCell.startDate)" :style="getBookingSpanStyle(dateCell)"
+                            @click="handleSpanClick(dateCell.booking)" :title="getSpanTooltip(dateCell)">
                             <div class="span-content">
                                 <span class="span-text">{{ getSpanText(dateCell) }}</span>
                             </div>
                         </div>
-                        <div v-else 
-                            class="date-cell"
-                            :class="getCellClasses(room, dateCell.dateString)" 
+                        <div v-else class="date-cell" :class="getCellClasses(room, dateCell.dateString)"
                             :style="getCellStyle(room, dateCell.dateString)"
-                            @click="handleCellClick(room, dateCell.dateString)" 
+                            @click="handleCellClick(room, dateCell.dateString)"
                             :title="getCellTooltip(room, dateCell.dateString)">
                             <!-- Single day booking indicator (when not part of a span) -->
                             <div v-if="hasBooking(room, dateCell.dateString)" class="booking-indicator">
@@ -76,7 +72,7 @@
                             {{ date.weekday }}
                         </div>
                     </div>
-                    
+
                     <!-- Mobile Days Grid -->
                     <div class="mobile-days">
                         <!-- Empty cells for proper alignment -->
@@ -87,32 +83,27 @@
                         <!-- Actual date cells -->
                         <template v-for="date in monthDates" :key="date.dateString">
                             <template v-if="hasBookingSpan(room, date.day)">
-                                <div v-for="spanSegment in getBookingSpanSegments(room, date)"
-                                    :key="spanSegment.row"
-                                    class="mobile-booking-span"
-                                    :class="[
+                                <div v-for="spanSegment in getBookingSpanSegments(room, date)" :key="spanSegment.row"
+                                    class="mobile-booking-span" :class="[
                                         getCellClasses(room, date.dateString),
                                         {
                                             'span-start': spanSegment.isStart,
                                             'span-end': spanSegment.isEnd,
                                             'span-middle': !spanSegment.isStart && !spanSegment.isEnd
                                         }
-                                    ]"
-                                    :style="spanSegment.style">
+                                    ]" :style="spanSegment.style" @click="handleCellClick(room, date.dateString)">
                                     <div class="mobile-span-content">
                                         <span class="mobile-span-text">
-                                            {{ spanSegment.isStart ? getSpanText(getBookingSpanForDate(room, date)) : '' }}
+                                            {{ spanSegment.isStart ? getSpanText(getBookingSpanForDate(room, date)) : ''
+                                            }}
                                         </span>
                                     </div>
                                 </div>
                             </template>
-                            <div v-else 
-                                class="mobile-date-cell"
-                                :class="[
-                                    getCellClasses(room, date.dateString),
-                                    { 'other-month': date.date.getMonth() !== currentMonth.getMonth() }
-                                ]" 
-                                :style="hasBooking(room, date.dateString) ? getCellStyle(room, date.dateString) : {}"
+                            <div v-else class="mobile-date-cell" :class="[
+                                getCellClasses(room, date.dateString),
+                                { 'other-month': date.date.getMonth() !== currentMonth.getMonth() }
+                            ]" :style="hasBooking(room, date.dateString) ? getCellStyle(room, date.dateString) : {}"
                                 @click="handleCellClick(room, date.dateString)">
                                 <div class="mobile-date-number">{{ date.day }}</div>
                                 <div v-if="hasBooking(room, date.dateString)" class="mobile-booking-indicator">
@@ -152,10 +143,10 @@ import type {
 
 // Props
 const props = withDefaults(defineProps<DashboardCalendarProps>(), {
-  selectedMonth: () => new Date(),
-  theme: 'light',
-  allowPreviousMonthNavigation: false,
-  textLabels: () => ({})
+    selectedMonth: () => new Date(),
+    theme: 'light',
+    allowPreviousMonthNavigation: false,
+    textLabels: () => ({})
 })
 
 // Emits
@@ -214,17 +205,17 @@ const defaultStatusConfig: StatusConfig[] = [
 
 // Computed Properties
 const availableStatuses = computed(() =>
-  props.statusConfig || defaultStatusConfig
+    props.statusConfig || defaultStatusConfig
 )
 
 // Text labels with fallbacks
 const labels = computed(() => ({
-  previousMonth: props.textLabels?.previousMonth || '← Previous',
-  nextMonth: props.textLabels?.nextMonth || 'Next →',
-  room: props.textLabels?.room || 'Room',
-  available: props.textLabels?.available || 'Available',
-  createBooking: props.textLabels?.createBooking || 'Click to create booking',
-  clickForDetails: props.textLabels?.clickForDetails || 'Click for details'
+    previousMonth: props.textLabels?.previousMonth || '← Previous',
+    nextMonth: props.textLabels?.nextMonth || 'Next →',
+    room: props.textLabels?.room || 'Room',
+    available: props.textLabels?.available || 'Available',
+    createBooking: props.textLabels?.createBooking || 'Click to create booking',
+    clickForDetails: props.textLabels?.clickForDetails || 'Click for details'
 }))
 
 const monthDates = computed(() => {
@@ -332,20 +323,20 @@ const formatMonth = (date: Date): string => {
 }
 
 const navigateMonth = (direction: number): void => {
-  // Allow navigation to previous months if allowPreviousMonthNavigation is true
-  if (direction < 0 && !props.allowPreviousMonthNavigation) {
-    const today = new Date()
-    const currentMonthStart = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1)
-    const todayMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-    
-    // Don't allow going to months before current month unless explicitly allowed
-    if (currentMonthStart <= todayMonthStart) return
-  }
-  
-  const newMonth = new Date(currentMonth.value)
-  newMonth.setMonth(newMonth.getMonth() + direction)
-  currentMonth.value = newMonth
-  emit('update:selectedMonth', newMonth)
+    // Allow navigation to previous months if allowPreviousMonthNavigation is true
+    if (direction < 0 && !props.allowPreviousMonthNavigation) {
+        const today = new Date()
+        const currentMonthStart = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1)
+        const todayMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+
+        // Don't allow going to months before current month unless explicitly allowed
+        if (currentMonthStart <= todayMonthStart) return
+    }
+
+    const newMonth = new Date(currentMonth.value)
+    newMonth.setMonth(newMonth.getMonth() + direction)
+    currentMonth.value = newMonth
+    emit('update:selectedMonth', newMonth)
 }
 
 const hasBooking = (room: Room, dateString: string): boolean => {
@@ -423,12 +414,12 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
 }
 
 const getCellTooltip = (room: Room, dateString: string): string => {
-  const booking = getBookingForRoomAndDate(room, dateString)
-  if (!booking) return `${labels.value.room} ${room.number} - ${labels.value.available} (${labels.value.createBooking})`
+    const booking = getBookingForRoomAndDate(room, dateString)
+    if (!booking) return `${labels.value.room} ${room.number} - ${labels.value.available} (${labels.value.createBooking})`
 
-  const statusConfig = getStatusConfig(booking.status)
-  const nights = calculateNights(booking.checkIn, booking.checkOut)
-  return `${booking.guestName} - ${labels.value.room} ${room.number} - ${statusConfig.label} - ${nights} nights (${labels.value.clickForDetails})`
+    const statusConfig = getStatusConfig(booking.status)
+    const nights = calculateNights(booking.checkIn, booking.checkOut)
+    return `${booking.guestName} - ${labels.value.room} ${room.number} - ${statusConfig.label} - ${nights} nights (${labels.value.clickForDetails})`
 }
 
 const handleCellClick = (room: Room, dateString: string): void => {
@@ -464,7 +455,7 @@ const getGridCellsForRoom = (room: Room): any[] => {
 
         // Check if this day is the start of a booking span
         const span = sortedSpans.find(s => s.startDay === day)
-        
+
         if (span) {
             // Create a booking span cell
             const dateString = monthDates.value[day - 1]?.dateString || ''
@@ -477,7 +468,7 @@ const getGridCellsForRoom = (room: Room): any[] => {
                 statusConfig: span.statusConfig,
                 startDate: dateString
             })
-            
+
             // Mark all days in this span as processed
             for (let spanDay = span.startDay; spanDay <= span.endDay; spanDay++) {
                 processedDays.add(spanDay)
@@ -555,8 +546,8 @@ const getFirstDayOffset = computed(() => {
 // NEW: Get booking span for a specific date
 const getBookingSpanForDate = (room: Room, date: any) => {
     const spans = bookingSpans.value[room.id] || []
-    return spans.find(span => 
-        date.day >= span.startDay && 
+    return spans.find(span =>
+        date.day >= span.startDay &&
         date.day <= span.endDay
     )
 }
@@ -683,7 +674,7 @@ const getMobileBookingStyle = (span: any): Record<string, string> => {
     // Get grid positions for start and end dates
     const startPos = getGridPosition(span.startDay)
     const endPos = getGridPosition(span.endDay)
-    
+
     // If span is in the same row
     if (startPos.row === endPos.row) {
         return {
@@ -695,11 +686,11 @@ const getMobileBookingStyle = (span: any): Record<string, string> => {
             zIndex: '1'
         }
     }
-    
+
     // For multi-row spans, create separate spans for each row
     const currentRow = startPos.row
     const lastColumn = 7
-    
+
     return {
         backgroundColor,
         color: span.statusConfig.color,
@@ -778,7 +769,8 @@ watch(() => props.selectedMonth, (newMonth) => {
 }
 
 .nav-arrow {
-    display: none;  /* Hidden by default for desktop */
+    display: none;
+    /* Hidden by default for desktop */
     font-size: 20px;
     line-height: 1;
     width: 24px;
@@ -805,11 +797,11 @@ watch(() => props.selectedMonth, (newMonth) => {
     .nav-text {
         display: none;
     }
-    
+
     .nav-arrow {
         display: flex;
     }
-    
+
     .nav-btn {
         width: 40px;
         height: 40px;
@@ -1200,7 +1192,8 @@ watch(() => props.selectedMonth, (newMonth) => {
 .mobile-date-number {
     font-size: 14px;
     font-weight: 500;
-    color: inherit;  /* Ensure date number inherits color from parent */
+    color: inherit;
+    /* Ensure date number inherits color from parent */
 }
 
 .mobile-booking-indicator {

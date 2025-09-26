@@ -75,8 +75,10 @@
 
       <div class="price-content">
         <div class="stay-info">
-          <span class="nights">{{ priceCalculation.nights }} {{ priceCalculation.nights === 1 ? labels.night : labels.nights }}</span>
-          <span class="dates">{{ modelValue?.checkIn && modelValue?.checkOut ? formatDateRange(modelValue.checkIn, modelValue.checkOut) : '' }}</span>
+          <span class="nights">{{ priceCalculation.nights }} {{ priceCalculation.nights === 1 ? labels.night :
+            labels.nights }}</span>
+          <span class="dates">{{ modelValue?.checkIn && modelValue?.checkOut ? formatDateRange(modelValue.checkIn,
+            modelValue.checkOut) : '' }}</span>
         </div>
 
         <div v-if="priceCalculation.dailyPrices.length > 1" class="breakdown">
@@ -125,6 +127,7 @@
       </slot>
     </div>
   </div>
+  {{ modelValue }}
 </template>
 
 <script setup lang="ts">
@@ -233,7 +236,7 @@ const calendarDays = computed((): CalendarDay[] => {
 const canGoPrevious = computed(() => {
   // If allowPreviousMonthNavigation is true, always allow going to previous months
   if (props.allowPreviousMonthNavigation) return true
-  
+
   if (!minDateObj.value) return true
   const prevMonth = new Date(currentDate.value)
   prevMonth.setMonth(prevMonth.getMonth() - 1)
@@ -554,11 +557,17 @@ onMounted(() => {
 })
 
 // Watch for changes
-watch(() => props.modelValue, (newValue) => {
+watch(() => props.modelValue, (newValue, oldValue) => {
   if (newValue.checkIn && !newValue.checkOut) {
     isSelectingRange.value = true
   } else {
     isSelectingRange.value = false
+  }
+
+  // Navigate to check-in month when model value changes
+  if (newValue.checkIn && newValue.checkIn !== oldValue?.checkIn) {
+    const checkInDate = new Date(newValue.checkIn)
+    currentDate.value = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), 1)
   }
 }, { deep: true })
 
