@@ -2,6 +2,56 @@
 
 ## Latest Release
 
+### Version 1.0.8 - Calendar Navigation Enhancement
+
+🎯 **Focus**: Improved calendar month navigation for programmatic date setting
+
+#### 🐛 Bug Fixes
+
+**📅 Calendar Navigation Improvements:**
+- ✅ Fixed calendar month navigation when model value is updated programmatically
+- ✅ Calendar now automatically navigates to check-in month when dates are set via model value
+- ✅ Improved user experience when setting dates through external controls or API responses
+- ✅ Enhanced watch function to handle model value changes and update current month display
+
+#### 🔧 Technical Details
+
+**🎯 Enhanced Model Value Handling:**
+- Improved `watch` function for `modelValue` to detect check-in date changes
+- Added automatic navigation to check-in month when model value is updated externally
+- Maintains backward compatibility with all existing functionality
+- Better integration with parent components that programmatically set dates
+
+**📱 Use Cases:**
+- Setting dates from API responses
+- External date picker integration
+- Programmatic date selection from other UI components
+- Better handling of default/preset date values
+
+#### 🛠️ Technical Implementation
+
+**Enhanced Watch Function:**
+```javascript
+// Now automatically navigates to check-in month when dates change
+watch(() => props.modelValue, (newValue, oldValue) => {
+  // ... existing selection logic ...
+  
+  // Navigate to check-in month when model value changes
+  if (newValue.checkIn && newValue.checkIn !== oldValue?.checkIn) {
+    const checkInDate = new Date(newValue.checkIn)
+    currentDate.value = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), 1)
+  }
+}, { deep: true })
+```
+
+**🎯 Benefits:**
+- Better user experience with automatic month navigation
+- Seamless integration with external date controls
+- Improved handling of preset/default date values
+- Maintains all existing calendar functionality
+
+---
+
 ### Version 1.0.7 - Mobile View Bug Fixes
 
 🎯 **Focus**: Improved mobile theme consistency and style handling

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.8] - 2025-09-26
+
+### 🐛 Bug Fixes
+
+**📅 Calendar Navigation Improvements:**
+- ✅ Fixed calendar month navigation when model value is updated programmatically
+- ✅ Calendar now automatically navigates to check-in month when dates are set via model value
+- ✅ Improved user experience when setting dates through external controls or API responses
+- ✅ Enhanced watch function to handle model value changes and update current month display
+
+**🔧 Technical Details:**
+- Enhanced the `watch` function for `modelValue` to detect check-in date changes
+- Added automatic navigation to check-in month when model value is updated externally
+- Maintains all existing functionality while improving programmatic date setting behavior
+
 ## [1.0.7] - 2025-01-24
 
 ### 🐛 Bug Fixes
