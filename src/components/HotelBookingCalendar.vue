@@ -127,7 +127,6 @@
       </slot>
     </div>
   </div>
-  {{ modelValue }}
 </template>
 
 <script setup lang="ts">
