@@ -2,7 +2,7 @@
 
 A comprehensive Vue 3 calendar component suite designed specifically for hotel booking systems. Features both guest booking calendar and hotel owner dashboard with intelligent price calculation, booking flow, and elegant design.
 
-[![npm version](https://badge.fury.io/js/vue-hotel-booking-calendar.svg)](https://www.npmjs.com/package/vue-hotel-booking-calendar)
+[![npm version](https://badge.fury.io/js/vue-hotel-booking-calendar.svg)](https://badge.fury.io/js/vue-hotel-booking-calendar)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub](https://img.shields.io/github/stars/evion-tech-llp/vue-hotel-booking-calendar?style=social)](https://github.com/evion-tech-llp/vue-hotel-booking-calendar)
 
