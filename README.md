@@ -40,7 +40,7 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 📅 **Flexible Navigation** - Optional previous month navigation for historical data  
 🔧 **Highly Customizable** - Extensive props and styling options
 
-## 🆕 What's New in v1.0.10
+## 🆕 What's New in v1.0.11
 
 - ✅ **iOS Safari Support** - Full compatibility with iOS Safari and mobile browsers
 - ✅ **Enhanced Mobile Layout** - Fixed mobile view layout and booking span alignment

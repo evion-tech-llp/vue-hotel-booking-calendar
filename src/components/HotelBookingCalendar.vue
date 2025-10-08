@@ -189,7 +189,7 @@ const weekdays = computed(() => {
   const formatter = new Intl.DateTimeFormat(props.locale, { weekday: 'short' })
   const days = []
   for (let i = 0; i < 7; i++) {
-    const date = new Date(2023, 0, i + 1) // Start from Sunday
+    const date = new Date(2023, 0, i + 1) // Start from Sunday (i + 1 because Jan 1, 2023 was Sunday)
     days.push(formatter.format(date))
   }
   return days
@@ -204,11 +204,13 @@ const calendarDays = computed((): CalendarDay[] => {
   const startDate = new Date(firstDay)
   const endDate = new Date(lastDay)
 
-  // Start from the first day of the week containing the first day of the month
-  startDate.setDate(startDate.getDate() - startDate.getDay())
+  // Start from the first day of the week containing the first day of the month (Sunday = 0)
+  const firstDayOfWeek = startDate.getDay() // Sunday=0, Monday=1, etc.
+  startDate.setDate(startDate.getDate() - firstDayOfWeek)
 
-  // End at the last day of the week containing the last day of the month
-  endDate.setDate(endDate.getDate() + (6 - endDate.getDay()))
+  // End at the last day of the week containing the last day of the month (Saturday = 6)
+  const lastDayOfWeek = 6 - endDate.getDay() // Calculate days to add to reach Saturday
+  endDate.setDate(endDate.getDate() + lastDayOfWeek)
 
   const days: CalendarDay[] = []
   const current = new Date(startDate)

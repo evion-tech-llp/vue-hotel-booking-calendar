@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.11] - 2025-10-08
+
+### Added
+- Added toggle switch for mobile view options (vertical/horizontal)
+- Added auto-scroll to today's date in horizontal mobile view
+
+### Changed
+- Made mobile vertical view calendar cells square for better visual consistency
+- Improved toggle button design with better visual feedback
+- Enhanced mobile view switching with smooth transitions
+
+### Fixed
+- Fixed weekday sequence to always start with Sunday
+- Fixed mobile view grid alignment issues
+
 ## [1.0.10] - 2025-10-08
 
 ### 🌐 iOS Safari & Mobile Compatibility

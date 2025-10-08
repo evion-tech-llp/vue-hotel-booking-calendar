@@ -61,15 +61,35 @@
 
         <!-- Mobile Calendar View -->
         <div class="calendar-container mobile-view">
-            <div v-for="room in props.rooms" :key="room.id" class="mobile-room-calendar">
-                <div class="mobile-room-header">
-                    <h3>{{ labels.room }} {{ room.number }}</h3>
-                </div>
+            <!-- Mobile View Toggle -->
+            <div class="mobile-view-toggle">
+                <button 
+                    @click="switchToVerticalView" 
+                    :class="{ active: !isHorizontalMobileView }"
+                    class="toggle-btn">
+                    <span class="toggle-icon">⊞</span>
+                    <span class="toggle-text">Vertical</span>
+                </button>
+                <button 
+                    @click="switchToHorizontalView" 
+                    :class="{ active: isHorizontalMobileView }"
+                    class="toggle-btn">
+                    <span class="toggle-icon">⊟</span>
+                    <span class="toggle-text">Horizontal</span>
+                </button>
+            </div>
+
+            <!-- Vertical Mobile View -->
+            <div v-if="!isHorizontalMobileView" class="vertical-mobile-view">
+                <div v-for="room in props.rooms" :key="room.id" class="mobile-room-calendar">
+                    <div class="mobile-room-header">
+                        <h3>{{ labels.room }} {{ room.number }}</h3>
+                    </div>
                 <div class="mobile-calendar-grid">
                     <!-- Mobile Weekdays Header -->
                     <div class="mobile-weekdays">
-                        <div v-for="date in monthDates.slice(0, 7)" :key="date.dateString" class="mobile-weekday">
-                            {{ date.weekday }}
+                        <div v-for="day in mobileWeekdays" :key="day" class="mobile-weekday">
+                            {{ day }}
                         </div>
                     </div>
 
@@ -99,6 +119,56 @@
                         </template>
                     </div>
                 </div>
+                </div>
+            </div>
+
+            <!-- Horizontal Mobile View -->
+            <div v-if="isHorizontalMobileView" class="horizontal-mobile-view">
+                <div class="horizontal-calendar-container">
+                    <!-- Horizontal Calendar Grid -->
+                    <div class="horizontal-calendar-grid">
+                        <!-- Header Row: Dates -->
+                        <div class="horizontal-grid-header">
+                            <div class="horizontal-room-header">{{ labels.room }}</div>
+                            <div v-for="date in monthDates" :key="date.dateString" class="horizontal-date-header" :class="{
+                                'is-today': date.isToday,
+                                'is-weekend': date.isWeekend
+                            }">
+                                <div class="horizontal-date-number">{{ date.day }}</div>
+                                <div class="horizontal-date-weekday">{{ date.weekday }}</div>
+                            </div>
+                        </div>
+
+                        <!-- Room Rows -->
+                        <div v-for="room in props.rooms" :key="room.id" class="horizontal-room-row">
+                            <!-- Room Name Column -->
+                            <div class="horizontal-room-name">{{ room.number }}</div>
+
+                            <!-- Date Cells with Grid Spans -->
+                            <template v-for="(dateCell, cellIndex) in getGridCellsForRoom(room)"
+                                :key="`${room.id}-${cellIndex}`">
+                                <div v-if="dateCell.type === 'booking-span'" class="horizontal-booking-span-cell"
+                                    :class="getCellClasses(room, dateCell.startDate)" :style="getBookingSpanStyle(dateCell)"
+                                    @click="handleSpanClick(dateCell.booking)" :title="getSpanTooltip(dateCell)">
+                                    <div class="horizontal-span-content">
+                                        <span class="horizontal-span-text">{{ getSpanText(dateCell) }}</span>
+                                    </div>
+                                </div>
+                                <div v-else class="horizontal-date-cell" :class="getCellClasses(room, dateCell.dateString)"
+                                    :style="getCellStyle(room, dateCell.dateString)"
+                                    @click="handleCellClick(room, dateCell.dateString)"
+                                    :title="getCellTooltip(room, dateCell.dateString)">
+                                    <!-- Single day booking indicator (when not part of a span) -->
+                                    <div v-if="hasBooking(room, dateCell.dateString)" class="horizontal-booking-indicator">
+                                        <span class="horizontal-guest-initials">
+                                            {{ getGuestInitials(room, dateCell.dateString) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -116,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import type {
     DashboardCalendarProps,
     DashboardCalendarEmits,
@@ -140,6 +210,7 @@ const emit = defineEmits<DashboardCalendarEmits>()
 
 // State
 const currentMonth = ref(new Date(props.selectedMonth!))
+const isHorizontalMobileView = ref(false)
 
 // Default status configuration
 const defaultStatusConfig: StatusConfig[] = [
@@ -201,6 +272,17 @@ const labels = computed(() => ({
     createBooking: props.textLabels?.createBooking || 'Click to create booking',
     clickForDetails: props.textLabels?.clickForDetails || 'Click for details'
 }))
+
+// Mobile weekday headers starting with Sunday
+const mobileWeekdays = computed(() => {
+    const formatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
+    const days = []
+    for (let i = 0; i < 7; i++) {
+        const date = new Date(2023, 0, i + 1) // Start from Sunday (Jan 1, 2023 was Sunday)
+        days.push(formatter.format(date))
+    }
+    return days
+})
 
 const monthDates = computed(() => {
     const year = currentMonth.value.getFullYear()
@@ -510,11 +592,50 @@ const handleSpanClick = (booking: Booking): void => {
     emit('booking-click', booking)
 }
 
-// NEW: Get first day offset for grid alignment
+// Mobile view switching methods
+const switchToVerticalView = () => {
+    isHorizontalMobileView.value = false
+}
+
+const switchToHorizontalView = () => {
+    isHorizontalMobileView.value = true
+    // Scroll to today's date after the DOM updates
+    nextTick(() => {
+        scrollToToday()
+    })
+}
+
+// Auto-scroll to today's date in horizontal view
+const scrollToToday = () => {
+    const today = new Date()
+    const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    
+    // Find today's date in the month dates
+    const todayIndex = monthDates.value.findIndex(date => date.dateString === todayString)
+    
+    if (todayIndex !== -1) {
+        const container = document.querySelector('.horizontal-calendar-container')
+        if (container) {
+            // Calculate scroll position to center today's date
+            const cellWidth = 80 // min-width of date cells
+            const roomColumnWidth = 60 // width of room column
+            const scrollPosition = (todayIndex * cellWidth) + roomColumnWidth - (container.clientWidth / 2) + (cellWidth / 2)
+            
+            container.scrollTo({
+                left: Math.max(0, scrollPosition),
+                behavior: 'smooth'
+            })
+        }
+    }
+}
+
+// NEW: Get first day offset for grid alignment (Sunday = 0)
 const getFirstDayOffset = computed(() => {
     if (monthDates.value.length === 0) return 0
     const firstDate = new Date(monthDates.value[0].dateString)
-    return firstDate.getDay() // 0 (Sunday) to 6 (Saturday)
+    const dayOfWeek = firstDate.getDay()
+    // Sunday=0, Monday=1, etc. - no conversion needed
+    return dayOfWeek
 })
 
 
@@ -524,6 +645,21 @@ const getFirstDayOffset = computed(() => {
 watch(() => props.selectedMonth, (newMonth) => {
     if (newMonth) {
         currentMonth.value = new Date(newMonth)
+        // Auto-scroll to today when month changes in horizontal view
+        if (isHorizontalMobileView.value) {
+            nextTick(() => {
+                scrollToToday()
+            })
+        }
+    }
+})
+
+// Watch for horizontal view changes to auto-scroll
+watch(isHorizontalMobileView, (newValue) => {
+    if (newValue) {
+        nextTick(() => {
+            scrollToToday()
+        })
     }
 })
 </script>
@@ -922,6 +1058,106 @@ watch(() => props.selectedMonth, (newMonth) => {
     display: none;
 }
 
+/* Mobile View Toggle */
+.mobile-view-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.theme-dark .mobile-view-toggle {
+    background: #2d2d2d;
+    border-color: #444;
+}
+
+.toggle-btn {
+    padding: 10px 20px;
+    border: 2px solid #e9ecef;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.toggle-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.toggle-btn:hover::before {
+    left: 100%;
+}
+
+.toggle-btn:hover {
+    background: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.toggle-btn.active {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+.toggle-btn.active::before {
+    display: none;
+}
+
+.toggle-icon {
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.toggle-text {
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.theme-dark .toggle-btn {
+    background: #2d2d2d;
+    border-color: #555;
+    color: #a0aec0;
+}
+
+.theme-dark .toggle-btn:hover {
+    background: #404040;
+    border-color: #60a5fa;
+    color: #60a5fa;
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.15);
+}
+
+.theme-dark .toggle-btn.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
 .mobile-room-calendar {
     background: white;
     border-radius: 8px;
@@ -988,27 +1224,26 @@ watch(() => props.selectedMonth, (newMonth) => {
     grid-template-columns: repeat(7, 1fr);
     gap: 4px;
     -webkit-gap: 4px;
-    -webkit-grid-auto-rows: minmax(40px, auto);
-    grid-auto-rows: minmax(40px, auto);
+    -webkit-grid-auto-rows: minmax(44px, auto);
+    grid-auto-rows: minmax(44px, auto);
 }
 
+
 .mobile-date-cell {
-    padding: 2px;
-    display: -webkit-flex;
+    aspect-ratio: 1;
+    padding: 4px;
     display: flex;
-    -webkit-flex-direction: column;
     flex-direction: column;
-    -webkit-align-items: center;
     align-items: center;
-    -webkit-justify-content: center;
     justify-content: center;
     border-radius: 6px;
     cursor: pointer;
     position: relative;
-    height: 40px;
     background: white;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    min-height: 44px;
+    min-width: 44px;
 }
 
 .theme-dark .mobile-date-cell {
@@ -1035,42 +1270,7 @@ watch(() => props.selectedMonth, (newMonth) => {
     font-size: 14px;
     font-weight: 500;
     color: inherit;
-    /* Ensure date number inherits color from parent */
-}
-
-.mobile-booking-indicator {
-    margin-top: 2px;
-    font-size: 10px;
-    font-weight: 600;
-}
-
-.mobile-date-cell {
-    aspect-ratio: 1;
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    cursor: pointer;
-    position: relative;
-    min-height: 40px;
-    background: white;
-}
-
-.mobile-date-cell.empty {
-    background: transparent;
-    cursor: default;
-}
-
-.mobile-date-cell.other-month {
-    opacity: 0.5;
-}
-
-.mobile-date-number {
-    font-size: 14px;
-    font-weight: 500;
-    color: inherit;
+    line-height: 1;
 }
 
 .mobile-booking-indicator {
@@ -1082,6 +1282,236 @@ watch(() => props.selectedMonth, (newMonth) => {
 .mobile-guest-initials {
     font-size: 10px;
     line-height: 1;
+}
+
+/* Horizontal Mobile View Styles */
+.horizontal-mobile-view {
+    padding: 16px;
+}
+
+.horizontal-calendar-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    background: white;
+}
+
+.theme-dark .horizontal-calendar-container {
+    border-color: #444;
+    background: #2d2d2d;
+}
+
+.horizontal-calendar-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(var(--days-in-month), 80px);
+    gap: 0;
+    min-width: max-content;
+}
+
+.horizontal-grid-header {
+    display: contents;
+}
+
+.horizontal-room-header {
+    padding: 12px 8px;
+    font-weight: 600;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+    font-size: 12px;
+    text-align: center;
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    color: #495057;
+}
+
+.theme-dark .horizontal-room-header {
+    background: #1e1e1e;
+    border-color: #444;
+    color: #ccc;
+}
+
+.horizontal-date-header {
+    padding: 6px 4px;
+    text-align: center;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 10px;
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    min-width: 80px;
+}
+
+.theme-dark .horizontal-date-header {
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+.horizontal-date-header.is-today {
+    background: #e3f2fd;
+    font-weight: 600;
+    color: #1976d2;
+}
+
+.theme-dark .horizontal-date-header.is-today {
+    background: #1e3a8a;
+    color: white;
+}
+
+.horizontal-date-header.is-weekend {
+    background: #fafafa;
+}
+
+.theme-dark .horizontal-date-header.is-weekend {
+    background: #4a2c17;
+}
+
+.horizontal-date-number {
+    font-weight: 600;
+    line-height: 1;
+    font-size: 11px;
+}
+
+.horizontal-date-weekday {
+    font-size: 8px;
+    color: #6c757d;
+    line-height: 1;
+    margin-top: 1px;
+    text-transform: uppercase;
+}
+
+.theme-dark .horizontal-date-weekday {
+    color: #999;
+}
+
+.horizontal-room-row {
+    display: contents;
+}
+
+.horizontal-room-name {
+    padding: 8px 4px;
+    font-weight: 600;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    background: white;
+    font-size: 11px;
+    text-align: center;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    color: #495057;
+}
+
+.theme-dark .horizontal-room-name {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #ccc;
+}
+
+.horizontal-date-cell {
+    padding: 0;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    height: 32px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    background: white;
+}
+
+.theme-dark .horizontal-date-cell {
+    border-color: #444;
+    background: #2d2d2d;
+}
+
+.horizontal-date-cell:hover {
+    background: #f8f9fa;
+    transform: scale(1.02);
+}
+
+.theme-dark .horizontal-date-cell:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.horizontal-date-cell.is-today {
+    border-left: 2px solid #1976d2;
+    background: #e3f2fd;
+}
+
+.theme-dark .horizontal-date-cell.is-today {
+    background: #1e3a8a;
+}
+
+.horizontal-booking-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    z-index: 5;
+}
+
+.horizontal-guest-initials {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.horizontal-booking-span-cell {
+    padding: 0;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    height: 32px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.theme-dark .horizontal-booking-span-cell {
+    border-color: #444;
+}
+
+.horizontal-booking-span-cell:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    z-index: 15;
+}
+
+.horizontal-booking-span-cell .horizontal-span-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+.horizontal-booking-span-cell .horizontal-span-text {
+    font-size: 9px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
 }
 
 /* Responsive Design */
