@@ -82,28 +82,12 @@
 
                         <!-- Actual date cells -->
                         <template v-for="date in monthDates" :key="date.dateString">
-                            <template v-if="hasBookingSpan(room, date.day)">
-                                <div v-for="spanSegment in getBookingSpanSegments(room, date)" :key="spanSegment.row"
-                                    class="mobile-booking-span" :class="[
-                                        getCellClasses(room, date.dateString),
-                                        {
-                                            'span-start': spanSegment.isStart,
-                                            'span-end': spanSegment.isEnd,
-                                            'span-middle': !spanSegment.isStart && !spanSegment.isEnd
-                                        }
-                                    ]" :style="spanSegment.style" @click="handleCellClick(room, date.dateString)">
-                                    <div class="mobile-span-content">
-                                        <span class="mobile-span-text">
-                                            {{ spanSegment.isStart ? getSpanText(getBookingSpanForDate(room, date)) : ''
-                                            }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </template>
-                            <div v-else class="mobile-date-cell" :class="[
-                                getCellClasses(room, date.dateString),
-                                { 'other-month': date.date.getMonth() !== currentMonth.getMonth() }
-                            ]" :style="hasBooking(room, date.dateString) ? getCellStyle(room, date.dateString) : {}"
+                            <div class="mobile-date-cell" 
+                                :class="[
+                                    getCellClasses(room, date.dateString),
+                                    { 'other-month': date.date.getMonth() !== currentMonth.getMonth() }
+                                ]" 
+                                :style="hasBooking(room, date.dateString) ? getCellStyle(room, date.dateString) : {}"
                                 @click="handleCellClick(room, date.dateString)">
                                 <div class="mobile-date-number">{{ date.day }}</div>
                                 <div v-if="hasBooking(room, date.dateString)" class="mobile-booking-indicator">
@@ -228,7 +212,6 @@ const monthDates = computed(() => {
     const dates = []
     for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day)
-        // Create dateString safely without timezone conversion
         const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
         dates.push({
@@ -501,8 +484,8 @@ const getBookingSpanStyle = (dateCell: any): Record<string, string> => {
         color: dateCell.statusConfig.color,
         border: `1px solid ${dateCell.statusConfig.color}`,
         borderRadius: '4px',
-        gridColumnStart: (dateCell.startDay + 1).toString(), // +1 because room column is first
-        gridColumnEnd: (dateCell.endDay + 2).toString() // +2 because grid-end is exclusive and room column is first
+        gridColumnStart: (dateCell.startDay + 1).toString(), // +1 for room column
+        gridColumnEnd: (dateCell.endDay + 2).toString() // +2 for room column and exclusive end
     }
 }
 
@@ -543,7 +526,23 @@ const getFirstDayOffset = computed(() => {
     return firstDate.getDay() // 0 (Sunday) to 6 (Saturday)
 })
 
-// NEW: Get booking span for a specific date
+// Helper methods for mobile booking display
+const isBookingStart = (room: Room, date: any) => {
+    const span = getBookingSpanForDate(room, date)
+    return span && date.day === span.startDay
+}
+
+const isBookingEnd = (room: Room, date: any) => {
+    const span = getBookingSpanForDate(room, date)
+    return span && date.day === span.endDay
+}
+
+const isBookingMiddle = (room: Room, date: any) => {
+    const span = getBookingSpanForDate(room, date)
+    return span && date.day > span.startDay && date.day < span.endDay
+}
+
+// Get booking span for a specific date
 const getBookingSpanForDate = (room: Room, date: any) => {
     const spans = bookingSpans.value[room.id] || []
     return spans.find(span =>
@@ -828,14 +827,20 @@ watch(() => props.selectedMonth, (newMonth) => {
     max-height: 70vh;
     overflow-y: auto;
     overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .calendar-grid {
+    display: -ms-grid;
+    display: -webkit-grid;
     display: grid;
     width: 100%;
+    -ms-grid-columns: 80px repeat(var(--days-in-month), 1fr);
+    -webkit-grid-template-columns: 80px repeat(var(--days-in-month), 1fr);
     grid-template-columns: 80px repeat(var(--days-in-month), 1fr);
-    /* Flexible columns */
     gap: 0;
+    -webkit-gap: 0;
 }
 
 /* Grid Header */
@@ -1156,10 +1161,68 @@ watch(() => props.selectedMonth, (newMonth) => {
 }
 
 .mobile-days {
+    display: -ms-grid;
+    display: -webkit-grid;
     display: grid;
+    -ms-grid-columns: repeat(7, 1fr);
+    -webkit-grid-template-columns: repeat(7, 1fr);
     grid-template-columns: repeat(7, 1fr);
     gap: 4px;
+    -webkit-gap: 4px;
+    -webkit-grid-auto-rows: minmax(40px, auto);
     grid-auto-rows: minmax(40px, auto);
+}
+
+.mobile-date-cell {
+    padding: 2px;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-justify-content: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    position: relative;
+    height: 40px;
+    background: white;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+.theme-dark .mobile-date-cell {
+    background: #1e1e1e;
+}
+
+.mobile-date-cell.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.mobile-date-cell.other-month,
+.mobile-date-cell[data-padding="true"] {
+    opacity: 0.5;
+    background: #f5f5f5;
+}
+
+.theme-dark .mobile-date-cell.other-month,
+.theme-dark .mobile-date-cell[data-padding="true"] {
+    background: #2a2a2a;
+}
+
+.mobile-date-number {
+    font-size: 14px;
+    font-weight: 500;
+    color: inherit;
+    /* Ensure date number inherits color from parent */
+}
+
+.mobile-booking-indicator {
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 600;
 }
 
 .mobile-date-cell {
@@ -1176,10 +1239,6 @@ watch(() => props.selectedMonth, (newMonth) => {
     background: white;
 }
 
-.theme-dark .mobile-date-cell {
-    background: #1e1e1e;
-}
-
 .mobile-date-cell.empty {
     background: transparent;
     cursor: default;
@@ -1193,7 +1252,6 @@ watch(() => props.selectedMonth, (newMonth) => {
     font-size: 14px;
     font-weight: 500;
     color: inherit;
-    /* Ensure date number inherits color from parent */
 }
 
 .mobile-booking-indicator {
@@ -1202,52 +1260,9 @@ watch(() => props.selectedMonth, (newMonth) => {
     font-weight: 600;
 }
 
-.mobile-booking-span {
-    padding: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-    position: relative;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-}
-
-.mobile-booking-span:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.mobile-booking-span.span-start {
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-    margin-left: 2px;
-}
-
-.mobile-booking-span.span-end {
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-    margin-right: 2px;
-}
-
-.mobile-span-content {
-    width: 100%;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0 4px;
-}
-
-.span-start .mobile-span-content {
-    padding-left: 8px;
-}
-
-.span-end .mobile-span-content {
-    padding-right: 8px;
+.mobile-guest-initials {
+    font-size: 10px;
+    line-height: 1;
 }
 
 /* Responsive Design */
