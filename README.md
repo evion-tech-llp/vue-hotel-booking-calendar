@@ -40,14 +40,14 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 📅 **Flexible Navigation** - Optional previous month navigation for historical data  
 🔧 **Highly Customizable** - Extensive props and styling options
 
-## 🆕 What's New in v1.0.6
+## 🆕 What's New in v1.0.10
 
-- ✅ **Enhanced Mobile Navigation** - Simplified arrow-only navigation on mobile devices
-- ✅ **Improved Mobile Dashboard** - New vertical stack layout for room calendars on small screens
-- ✅ **Better Booking Spans** - Enhanced handling of bookings that span multiple weeks
-- ✅ **Responsive Refinements** - Better grid alignment and touch targets for mobile users
-- ✅ **Technical Improvements** - Refactored grid system and booking span calculations
-- ✅ **Mobile-First Updates** - Optimized spacing and visual separation for small screens
+- ✅ **iOS Safari Support** - Full compatibility with iOS Safari and mobile browsers
+- ✅ **Enhanced Mobile Layout** - Fixed mobile view layout and booking span alignment
+- ✅ **Touch Optimization** - Improved touch handling and scrolling behavior
+- ✅ **Grid Compatibility** - Better grid layout support across all browsers
+- ✅ **Visual Consistency** - Consistent styling and behavior on all platforms
+- ✅ **Performance Improvements** - Optimized rendering and touch interactions
 
 ## 📱 Mobile Responsiveness
 
@@ -601,8 +601,16 @@ Both components include comprehensive accessibility features:
 
 - Chrome/Edge 88+
 - Firefox 78+
-- Safari 14+
+- Safari 14+ (including iOS Safari)
 - Mobile browsers
+
+### iOS Safari Support
+The calendar is fully optimized for iOS Safari with:
+- Proper grid layout support with vendor prefixes
+- Enhanced touch handling and scrolling
+- Consistent visual appearance
+- Optimized mobile interactions
+- Smooth booking span behavior
 
 ## 🤝 Contributing
 
