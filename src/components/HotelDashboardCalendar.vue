@@ -405,17 +405,120 @@ const navigateMonth = (direction: number): void => {
 }
 
 const hasBooking = (room: Room, dateString: string): boolean => {
-    return props.bookings.some(booking =>
-        booking.roomNumber === room.number &&
-        isDateInBookingRange(dateString, booking)
-    )
+    try {
+        if (!room || !dateString) {
+            console.warn('HotelDashboardCalendar: Invalid room or dateString in hasBooking', { room, dateString })
+            return false
+        }
+
+        if (!Array.isArray(props.bookings)) {
+            console.warn('HotelDashboardCalendar: bookings prop is not an array', props.bookings)
+            return false
+        }
+
+        const matchingBooking = props.bookings.find(booking => {
+            try {
+                if (!booking || typeof booking !== 'object') {
+                    console.warn('HotelDashboardCalendar: Invalid booking object', booking)
+                    return false
+                }
+
+                if (!booking.roomNumber || !booking.checkIn || !booking.checkOut) {
+                    console.warn('HotelDashboardCalendar: Missing required booking properties', booking)
+                    return false
+                }
+
+                const isMatch = booking.roomNumber === room.number && isDateInBookingRange(dateString, booking)
+                
+                // Only log if there's a room number match but date doesn't match
+                if (booking.roomNumber === room.number && !isMatch) {
+                    console.debug(
+                        'HotelDashboardCalendar: Date range mismatch',
+                        {
+                            room: room.number,
+                            date: dateString,
+                            booking: {
+                                checkIn: booking.checkIn,
+                                checkOut: booking.checkOut,
+                                normalized: {
+                                    checkIn: new Date(booking.checkIn).toISOString(),
+                                    checkOut: new Date(booking.checkOut).toISOString(),
+                                    date: new Date(dateString).toISOString()
+                                }
+                            }
+                        }
+                    )
+                }
+                
+                return isMatch
+            } catch (err) {
+                console.error('HotelDashboardCalendar: Error processing booking', err, booking)
+                return false
+            }
+        })
+        return !!matchingBooking
+    } catch (err) {
+        console.error('HotelDashboardCalendar: Error in hasBooking', err, { room, dateString })
+        return false
+    }
 }
 
 const isDateInBookingRange = (dateString: string, booking: Booking): boolean => {
-    const date = new Date(dateString)
-    const checkIn = new Date(booking.checkIn)
-    const checkOut = new Date(booking.checkOut)
-    return date >= checkIn && date < checkOut
+    try {
+        // Validate inputs
+        if (!dateString || !booking?.checkIn || !booking?.checkOut) {
+            console.warn('HotelDashboardCalendar: Invalid date or booking in isDateInBookingRange', { dateString, booking })
+            return false
+        }
+
+        // Parse and validate the dates
+        let date, checkIn, checkOut
+        try {
+            date = new Date(dateString)
+            checkIn = new Date(booking.checkIn)
+            checkOut = new Date(booking.checkOut)
+
+            // Check for invalid dates
+            if (isNaN(date.getTime()) || isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
+                console.warn('HotelDashboardCalendar: Invalid date format', {
+                    date: dateString,
+                    checkIn: booking.checkIn,
+                    checkOut: booking.checkOut
+                })
+                return false
+            }
+        } catch (err) {
+            console.error('HotelDashboardCalendar: Date parsing error', err, { dateString, booking })
+            return false
+        }
+
+        // Normalize all dates to start of day
+        date.setHours(0, 0, 0, 0)
+        checkIn.setHours(0, 0, 0, 0)
+        checkOut.setHours(0, 0, 0, 0)
+
+        // Handle same-day bookings (where checkIn equals checkOut)
+        const isSameDayBooking = checkIn.getTime() === checkOut.getTime()
+        
+        if (!isSameDayBooking && checkOut <= checkIn) {
+            console.warn('HotelDashboardCalendar: Invalid booking dates (checkOut <= checkIn)', {
+                checkIn: booking.checkIn,
+                checkOut: booking.checkOut
+            })
+            return false
+        }
+
+        // For same-day bookings, only match if the date is exactly the check-in date
+        if (isSameDayBooking) {
+            return date.getTime() === checkIn.getTime()
+        }
+
+        // For normal bookings, check if date is within range (inclusive start, exclusive end)
+        return date >= checkIn && date < checkOut
+    } catch (err) {
+        console.error('HotelDashboardCalendar: Error in isDateInBookingRange', err, { dateString, booking })
+        return false
+    }
 }
 
 const getBookingForRoomAndDate = (room: Room, dateString: string): Booking | null => {

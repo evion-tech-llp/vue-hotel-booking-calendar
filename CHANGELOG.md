@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.13] - 2025-10-13
+
+### Fixed
+- Fixed same-day bookings not showing in mobile calendar view
+- Added proper handling for bookings where check-in and check-out dates are the same
+- Enhanced date range validation and error logging
+
 ## [1.0.12] - 2025-10-13
 
 ### Fixed
