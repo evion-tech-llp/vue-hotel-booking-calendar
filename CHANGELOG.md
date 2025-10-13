@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.12] - 2025-10-13
+
+### Fixed
+- Fixed mobile vertical view calendar layout and grid issues
+- Fixed Safari visibility issues with booking colors and indicators
+- Fixed vertical stretching of bookings in mobile view
+- Improved date and booking name positioning in calendar cells
+- Enhanced mobile calendar grid layout for better consistency
+
 ## [1.0.11] - 2025-10-08
 
 ### Added

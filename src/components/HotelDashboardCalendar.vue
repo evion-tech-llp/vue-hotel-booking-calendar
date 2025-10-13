@@ -1216,34 +1216,41 @@ watch(isHorizontalMobileView, (newValue) => {
 }
 
 .mobile-days {
-    display: -ms-grid;
-    display: -webkit-grid;
     display: grid;
-    -ms-grid-columns: repeat(7, 1fr);
-    -webkit-grid-template-columns: repeat(7, 1fr);
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
-    -webkit-gap: 4px;
-    -webkit-grid-auto-rows: minmax(44px, auto);
-    grid-auto-rows: minmax(44px, auto);
+    gap: 2px;
+    width: 100%;
+    padding: 2px;
+    box-sizing: border-box;
 }
 
 
 .mobile-date-cell {
-    aspect-ratio: 1;
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    position: relative;
+    padding-top: 100%; /* Creates a square aspect ratio */
+    width: 100%;
+    background: white;
     border-radius: 6px;
     cursor: pointer;
-    position: relative;
-    background: white;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    min-height: 44px;
-    min-width: 44px;
+}
+
+.mobile-date-cell > .mobile-date-number {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    font-size: 14px;
+    line-height: 1;
+    z-index: 1;
+    font-weight: 500;
+}
+
+.mobile-date-cell.has-booking > .mobile-date-number {
+    top: 40%;
+    color: inherit;
 }
 
 .theme-dark .mobile-date-cell {
@@ -1274,14 +1281,26 @@ watch(isHorizontalMobileView, (newValue) => {
 }
 
 .mobile-booking-indicator {
-    margin-top: 2px;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border-radius: 4px;
     font-size: 10px;
     font-weight: 600;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 4px;
 }
 
 .mobile-guest-initials {
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 /* Horizontal Mobile View Styles */
