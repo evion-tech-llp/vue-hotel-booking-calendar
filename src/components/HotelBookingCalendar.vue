@@ -392,25 +392,32 @@ const isErrorBlocked = (dateString: string): boolean => {
   return selectionError.value?.blockedDates?.includes(dateString) || false
 }
 
-// NEW: Enhanced blocked dates detection
-const getBlockedDatesInRange = (startDate: string, endDate: string): string[] => {
+// Enhanced blocked dates and checkout-only dates detection
+const getInvalidDatesInRange = (startDate: string, endDate: string, includeEndDate = false): { blockedDates: string[], checkoutOnlyDates: string[] } => {
   const start = new Date(startDate)
   const end = new Date(endDate)
   const current = new Date(start)
   const blockedDates: string[] = []
+  const checkoutOnlyDates: string[] = []
 
+  // Skip the start date but include the current date in the check
   current.setDate(current.getDate() + 1)
 
-  while (current < end) {
+  // Check dates up to and including end date if includeEndDate is true
+  while (current < end || (includeEndDate && current.getTime() === end.getTime())) {
     const dateString = toDateString(current)
     const availability = availabilityMap.value.get(dateString)
-    if (availability?.status === 'blocked') {
+    
+    // Don't include the end date in checkout-only validation if it's the final checkout date
+    if (availability?.status === 'checkout-only' && (!includeEndDate || current < end)) {
+      checkoutOnlyDates.push(dateString)
+    } else if (availability?.status === 'blocked') {
       blockedDates.push(dateString)
     }
     current.setDate(current.getDate() + 1)
   }
 
-  return blockedDates
+  return { blockedDates, checkoutOnlyDates }
 }
 
 const isDaySelected = (dateString: string): boolean => {
@@ -449,18 +456,19 @@ const clearSelectionError = () => {
   selectionError.value = null
 }
 
-const createSelectionError = (type: SelectionError['type'], blockedDates?: string[]): SelectionError => {
+const createSelectionError = (type: SelectionError['type'], dates?: string[]): SelectionError => {
   const messages = {
     'blocked-dates-in-range': 'Selected dates include unavailable periods. Please choose different dates.',
     'min-stay-not-met': 'Minimum stay requirement not met for selected dates.',
     'max-stay-exceeded': 'Selected stay exceeds maximum allowed duration.',
-    'invalid-range': 'Invalid date range selected.'
+    'invalid-range': dates?.[0] || 'Invalid date range selected.',
+    'checkout-only-in-range': 'Cannot include checkout-only dates within your stay. These dates can only be used as the final checkout date.'
   }
 
   return {
     type,
     message: messages[type],
-    blockedDates
+    blockedDates: (type === 'blocked-dates-in-range' || type === 'checkout-only-in-range') ? dates : undefined
   }
 }
 
@@ -494,15 +502,27 @@ const handleDayClick = (day: CalendarDay) => {
 
   const { checkIn, checkOut } = props.modelValue
   const clickedDate = day.dateString
+  const clickedStatus = getEffectiveStatus(day)
 
-  emit('date-click', clickedDate, getEffectiveStatus(day))
+  emit('date-click', clickedDate, clickedStatus)
 
+  // Starting a new selection
   if (!checkIn || (checkIn && checkOut)) {
+    // Don't allow starting a selection on a checkout-only date
+    if (clickedStatus === 'checkout-only') {
+      const error = createSelectionError('invalid-range', ['Checkout-only dates cannot be used as check-in dates'])
+      selectionError.value = error
+      emit('selection-error', error)
+      return
+    }
+
     const newValue = { checkIn: clickedDate, checkOut: null }
     emit('update:modelValue', newValue)
     emit('selection-change', newValue)
     isSelectingRange.value = true
-  } else if (checkIn && !checkOut) {
+  } 
+  // Completing a selection
+  else if (checkIn && !checkOut) {
     if (clickedDate === checkIn && !props.allowSingleDay) {
       return
     }
@@ -510,9 +530,49 @@ const handleDayClick = (day: CalendarDay) => {
     const startDate = clickedDate < checkIn ? clickedDate : checkIn
     const endDate = clickedDate < checkIn ? checkIn : clickedDate
 
-    const blockedDates = getBlockedDatesInRange(startDate, endDate)
-    if (blockedDates.length > 0) {
-      const error = createSelectionError('blocked-dates-in-range', blockedDates)
+    // If selecting backwards and clicked date is checkout-only
+    if (clickedDate < checkIn && clickedStatus === 'checkout-only') {
+      const error = createSelectionError('invalid-range', ['Checkout-only dates cannot be used as check-in dates'])
+      selectionError.value = error
+      emit('selection-error', error)
+      return
+    }
+
+    // If selecting forwards and start date is checkout-only
+    if (clickedDate > checkIn) {
+      const startDateStatus = availabilityMap.value.get(startDate)?.status
+      if (startDateStatus === 'checkout-only') {
+        const error = createSelectionError('invalid-range', ['Checkout-only dates cannot be used as check-in dates'])
+        selectionError.value = error
+        emit('selection-error', error)
+        return
+      }
+    }
+
+    // Check for blocked and checkout-only dates in the range
+    const { blockedDates, checkoutOnlyDates } = getInvalidDatesInRange(startDate, endDate, true)
+    const endDateStatus = getEffectiveStatus({ date: new Date(endDate), dateString: endDate } as CalendarDay)
+    
+    // Handle blocked dates (including end date if blocked)
+    if (blockedDates.length > 0 || endDateStatus === 'blocked') {
+      const allBlockedDates = [...blockedDates]
+      if (endDateStatus === 'blocked') {
+        allBlockedDates.push(endDate)
+      }
+      const error = createSelectionError('blocked-dates-in-range', allBlockedDates)
+      selectionError.value = error
+      emit('selection-error', error)
+
+      const newValue = { checkIn: clickedDate, checkOut: null }
+      emit('update:modelValue', newValue)
+      emit('selection-change', newValue)
+      isSelectingRange.value = true
+      return
+    }
+
+    // Handle checkout-only dates within the range (not at the end)
+    if (checkoutOnlyDates.length > 0) {
+      const error = createSelectionError('checkout-only-in-range', checkoutOnlyDates)
       selectionError.value = error
       emit('selection-error', error)
 

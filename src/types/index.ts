@@ -15,7 +15,7 @@ export interface DateRange {
 }
 
 export interface SelectionError {
-  type: 'blocked-dates-in-range' | 'min-stay-not-met' | 'max-stay-exceeded' | 'invalid-range'
+  type: 'blocked-dates-in-range' | 'min-stay-not-met' | 'max-stay-exceeded' | 'invalid-range' | 'checkout-only-in-range'
   message: string
   blockedDates?: string[]
 }

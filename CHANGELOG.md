@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.14] - 2025-10-15
+
+### Added
+- Enhanced validation for checkout-only dates
+- Added visual indicators for checkout-only dates in error messages
+- Improved date range validation to prevent invalid selections
+
+### Fixed
+- Fixed issue where checkout-only dates could be included within stay range
+- Added proper validation for blocked dates between selected dates
+- Enhanced error messages to show specific dates causing validation issues
+
 ## [1.0.13] - 2025-10-13
 
 ### Fixed

@@ -145,12 +145,13 @@ const guestAvailabilityData = computed<DateAvailability[]>(() => [
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
     const basePrice = isWeekend ? 110 : 85
 
-    // Some random blocked dates
+    // Some random blocked and checkout-only dates
     const isBlocked = [5, 12, 19, 25, 31, 38, 45].includes(i)
+    const isCheckoutOnly = [7, 15, 22, 28, 35, 42].includes(i)
 
     return {
       date,
-      status: isBlocked ? 'blocked' as const : 'available' as const,
+      status: isBlocked ? 'blocked' as const : isCheckoutOnly ? 'checkout-only' as const : 'available' as const,
       price: basePrice,
       minStay: isWeekend ? 2 : 1,
       maxStay: 14
