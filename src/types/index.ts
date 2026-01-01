@@ -139,4 +139,164 @@ export interface DashboardCalendarEmits {
   'update:selectedMonth': [value: Date]
   'booking-click': [booking: Booking]
   'booking-create': [data: { roomId: string; date: string }]
+}
+
+// ============================================================================
+// Resource Scheduler Calendar Types
+// ============================================================================
+
+// View types for the scheduler
+export type SchedulerViewType = 'yearly' | 'monthly' | 'weekly' | 'daily' | 'hourly'
+
+// Event category for color-coding
+export interface EventCategory {
+  id: string
+  name: string
+  color: string
+  backgroundColor: string
+  darkBackgroundColor?: string
+}
+
+// Recurrence pattern for recurring events
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
+
+export interface RecurrencePattern {
+  frequency: RecurrenceFrequency
+  interval: number // e.g., every 2 weeks
+  endDate?: string // ISO date string
+  endAfterOccurrences?: number
+  daysOfWeek?: number[] // 0-6 for weekly recurrence (Sunday = 0)
+  dayOfMonth?: number // for monthly recurrence
+}
+
+// Resource Event (core scheduling unit)
+export interface ResourceEvent {
+  id: string
+  title: string
+  description?: string
+  start: string // ISO datetime string
+  end: string // ISO datetime string
+  allDay?: boolean
+  categoryId?: string
+  color?: string // Override category color
+  backgroundColor?: string
+  recurrence?: RecurrencePattern
+  location?: string
+  metadata?: Record<string, unknown>
+}
+
+// Time slot for selection
+export interface TimeSlot {
+  start: string // ISO datetime string
+  end: string // ISO datetime string
+  date: string // ISO date string
+  hour?: number
+  minute?: number
+}
+
+// Conflict information
+export interface EventConflict {
+  eventId: string
+  conflictingEventIds: string[]
+  message: string
+}
+
+// Custom text labels for the scheduler calendar
+export interface SchedulerTextLabels {
+  today?: string
+  previousPeriod?: string
+  nextPeriod?: string
+  yearView?: string
+  monthView?: string
+  weekView?: string
+  dayView?: string
+  hourView?: string
+  allDay?: string
+  noEvents?: string
+  createEvent?: string
+  editEvent?: string
+  deleteEvent?: string
+  eventDetails?: string
+  conflictWarning?: string
+  cancel?: string
+  save?: string
+}
+
+// Time interval options for hourly view
+export type TimeInterval = 15 | 30 | 60
+
+// Working hours configuration
+export interface WorkingHours {
+  start: number // Hour (0-23)
+  end: number // Hour (0-23)
+  daysOfWeek?: number[] // 0-6, defaults to Mon-Fri
+}
+
+// Scheduler Calendar Props
+export interface SchedulerCalendarProps {
+  events?: ResourceEvent[]
+  categories?: EventCategory[]
+  selectedDate?: Date
+  view?: SchedulerViewType
+  theme?: 'light' | 'dark'
+  locale?: string
+  timeInterval?: TimeInterval
+  workingHours?: WorkingHours
+  showWeekNumbers?: boolean
+  showAllDaySlot?: boolean
+  allowEventCreation?: boolean
+  allowEventEditing?: boolean
+  allowEventDeletion?: boolean
+  minDate?: string | Date
+  maxDate?: string | Date
+  textLabels?: SchedulerTextLabels
+  firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6 // 0 = Sunday, 1 = Monday, etc.
+}
+
+// Scheduler Calendar Emits
+export interface SchedulerCalendarEmits {
+  'update:selectedDate': [value: Date]
+  'update:view': [value: SchedulerViewType]
+  'event-click': [event: ResourceEvent]
+  'event-create': [data: { start: string; end: string; allDay?: boolean }]
+  'event-update': [event: ResourceEvent]
+  'event-delete': [eventId: string]
+  'slot-click': [slot: TimeSlot]
+  'date-click': [date: string]
+  'view-change': [view: SchedulerViewType]
+  'date-range-change': [range: { start: string; end: string }]
+  'conflict-detected': [conflict: EventConflict]
+}
+
+// Helper type for calendar day in scheduler
+export interface SchedulerDay {
+  date: Date
+  dateString: string
+  isToday: boolean
+  isCurrentMonth: boolean
+  isCurrentWeek: boolean
+  isWeekend: boolean
+  isWorkingDay: boolean
+  events: ResourceEvent[]
+  weekNumber?: number
+}
+
+// Helper type for time slot in hourly/daily view
+export interface SchedulerTimeSlot {
+  time: string // HH:mm format
+  hour: number
+  minute: number
+  isWorkingHour: boolean
+  events: ResourceEvent[]
+}
+
+// Helper type for month in yearly view
+export interface SchedulerMonth {
+  date: Date
+  month: number // 0-11
+  year: number
+  name: string
+  shortName: string
+  eventCount: number
+  hasEvents: boolean
 } 

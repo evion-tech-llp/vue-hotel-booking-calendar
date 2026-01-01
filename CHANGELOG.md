@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-01-01
+
+### Added
+- **New ResourceSchedulerCalendar Component** - A comprehensive resource scheduling calendar with multiple views:
+  - Yearly View: 12-month grid overview with mini calendars and event indicators
+  - Monthly View: Traditional calendar grid with event display
+  - Weekly View: 7-day time grid with all-day events section
+  - Daily View: Single day hourly breakdown with current time indicator
+  - Hourly View: Detailed time slots with configurable intervals (15/30/60 min)
+- Recurring events support (daily, weekly, monthly, yearly)
+- Event categories with customizable colors
+- Working hours configuration
+- Conflict detection for overlapping events
+- Theme support (light/dark)
+- Full responsive design for all screen sizes
+- Internationalization support with customizable text labels
+
+### Changed
+- Updated type exports to include all new scheduler types
+
 ## [1.0.14] - 2025-10-15
 
 ### Added

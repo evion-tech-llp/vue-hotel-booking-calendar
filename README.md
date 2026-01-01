@@ -29,6 +29,16 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 🔗 **Event-Driven** - Emits events for parent component to handle bookings  
 💅 **Elegant Design** - Clean white aesthetic with subtle shadows
 
+### 📆 **Resource Scheduler Calendar** (NEW!)
+
+📅 **Multiple Views** - Yearly, Monthly, Weekly, Daily, and Hourly views  
+🔄 **Recurring Events** - Support for daily, weekly, monthly, yearly recurrence  
+🏷️ **Event Categories** - Customizable categories with colors  
+⏰ **Time Intervals** - Configurable 15/30/60 minute slots  
+🕐 **Working Hours** - Define working hours per day of week  
+⚠️ **Conflict Detection** - Automatic detection of overlapping events  
+📊 **Utilization Stats** - View time utilization in hourly view
+
 ### 🎨 **Shared Features**
 
 🎨 **Beautiful Design** - Modern, clean interface with elegant white theme  
@@ -40,7 +50,17 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 📅 **Flexible Navigation** - Optional previous month navigation for historical data  
 🔧 **Highly Customizable** - Extensive props and styling options
 
-## 🆕 What's New in v1.0.11
+## 🆕 What's New in v1.1.0
+
+- ✅ **New ResourceSchedulerCalendar Component** - Complete resource scheduling solution
+- ✅ **5 Calendar Views** - Yearly, Monthly, Weekly, Daily, and Hourly views
+- ✅ **Recurring Events** - Full support for event recurrence patterns
+- ✅ **Event Categories** - Color-coded categories for easy identification
+- ✅ **Working Hours** - Configure available time slots per day
+- ✅ **Time Intervals** - 15, 30, or 60 minute time slot options
+- ✅ **Responsive Design** - Optimized for all screen sizes
+
+## What's New in v1.0.11
 
 - ✅ **iOS Safari Support** - Full compatibility with iOS Safari and mobile browsers
 - ✅ **Enhanced Mobile Layout** - Fixed mobile view layout and booking span alignment
@@ -121,11 +141,13 @@ app.mount('#app')
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { HotelBookingCalendar, HotelDashboardCalendar } from 'vue-hotel-booking-calendar'
+import { HotelBookingCalendar, HotelDashboardCalendar, ResourceSchedulerCalendar } from 'vue-hotel-booking-calendar'
 import 'vue-hotel-booking-calendar/dist/style.css'
 
 const guestDates = ref({ checkIn: null, checkOut: null })
 const dashboardMonth = ref(new Date())
+const schedulerDate = ref(new Date())
+const schedulerView = ref('monthly')
 </script>
 
 <template>
@@ -157,6 +179,17 @@ const dashboardMonth = ref(new Date())
     }"
     @booking-click="showBookingDetails"
     @booking-create="showCreateForm"
+  />
+
+  <!-- Resource Scheduler Calendar -->
+  <ResourceSchedulerCalendar
+    v-model:selected-date="schedulerDate"
+    v-model:view="schedulerView"
+    :events="events"
+    :categories="categories"
+    theme="light"
+    @event-click="handleEventClick"
+    @slot-click="handleSlotClick"
   />
 </template>
 ```
@@ -232,6 +265,118 @@ const handleBookingCreate = (data: { roomId: string; date: string }) => {
   />
 </template>
 ```
+
+## 📆 Resource Scheduler Calendar
+
+A versatile calendar component for single-resource scheduling with multiple views:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { ResourceSchedulerCalendar } from 'vue-hotel-booking-calendar'
+import type { ResourceEvent, EventCategory } from 'vue-hotel-booking-calendar'
+
+const selectedDate = ref(new Date())
+const currentView = ref<'yearly' | 'monthly' | 'weekly' | 'daily' | 'hourly'>('monthly')
+
+const events = ref<ResourceEvent[]>([
+  {
+    id: '1',
+    title: 'Team Meeting',
+    start: '2026-01-15T09:00:00',
+    end: '2026-01-15T10:30:00',
+    categoryId: 'work',
+    description: 'Weekly team sync'
+  },
+  {
+    id: '2',
+    title: 'Project Review',
+    start: '2026-01-15T14:00:00',
+    end: '2026-01-15T15:00:00',
+    categoryId: 'meeting',
+    allDay: false
+  },
+  {
+    id: '3',
+    title: 'Company Holiday',
+    start: '2026-01-20',
+    end: '2026-01-20',
+    allDay: true,
+    categoryId: 'holiday'
+  }
+])
+
+const categories = ref<EventCategory[]>([
+  { id: 'work', name: 'Work', color: '#ffffff', backgroundColor: '#3b82f6', darkBackgroundColor: '#1e40af' },
+  { id: 'meeting', name: 'Meeting', color: '#ffffff', backgroundColor: '#10b981', darkBackgroundColor: '#047857' },
+  { id: 'holiday', name: 'Holiday', color: '#ffffff', backgroundColor: '#f59e0b', darkBackgroundColor: '#b45309' }
+])
+
+const workingHours = ref({
+  monday: { start: '09:00', end: '17:00', enabled: true },
+  tuesday: { start: '09:00', end: '17:00', enabled: true },
+  wednesday: { start: '09:00', end: '17:00', enabled: true },
+  thursday: { start: '09:00', end: '17:00', enabled: true },
+  friday: { start: '09:00', end: '17:00', enabled: true },
+  saturday: { start: '10:00', end: '14:00', enabled: false },
+  sunday: { start: '10:00', end: '14:00', enabled: false }
+})
+
+const handleEventClick = (event: ResourceEvent) => {
+  console.log('Event clicked:', event)
+}
+
+const handleSlotClick = (slot: { start: string; end: string; date: string }) => {
+  console.log('Create event at:', slot)
+}
+</script>
+
+<template>
+  <ResourceSchedulerCalendar
+    v-model:selected-date="selectedDate"
+    v-model:view="currentView"
+    :events="events"
+    :categories="categories"
+    :working-hours="workingHours"
+    :time-interval="30"
+    :show-all-day-slot="true"
+    theme="light"
+    locale="en-US"
+    @event-click="handleEventClick"
+    @slot-click="handleSlotClick"
+  />
+</template>
+```
+
+### Recurring Events
+
+The scheduler supports recurring events:
+
+```typescript
+const recurringEvent: ResourceEvent = {
+  id: '4',
+  title: 'Daily Standup',
+  start: '2026-01-01T10:00:00',
+  end: '2026-01-01T10:15:00',
+  categoryId: 'meeting',
+  recurrence: {
+    frequency: 'daily',      // 'daily' | 'weekly' | 'monthly' | 'yearly'
+    interval: 1,             // Every N days/weeks/months/years
+    endDate: '2026-12-31',   // Optional end date
+    daysOfWeek: [1, 2, 3, 4, 5]  // For weekly: 0=Sun, 1=Mon, etc.
+  }
+}
+```
+
+### Views
+
+| View | Description |
+|------|-------------|
+| `yearly` | 12-month grid with mini calendars and event indicators |
+| `monthly` | Traditional calendar grid with events |
+| `weekly` | 7-day time grid with all-day events section |
+| `daily` | Single day with hourly breakdown and current time indicator |
+| `hourly` | Detailed time slots with configurable intervals |
 
 ## 💰 Guest Booking Calendar
 
@@ -463,6 +608,22 @@ const availabilityData = [
 | `allowPreviousMonthNavigation` | `Boolean` | `false` | Allow navigation to previous months |
 | `textLabels`    | `Object` | `{}`              | Custom text labels for UI elements |
 
+### 📆 ResourceSchedulerCalendar (Resource Scheduling)
+
+| Prop             | Type     | Default           | Description                              |
+| ---------------- | -------- | ----------------- | ---------------------------------------- |
+| `selectedDate`   | `Date`   | `new Date()`      | Currently selected/displayed date        |
+| `view`           | `String` | `'monthly'`       | Current view ('yearly'/'monthly'/'weekly'/'daily'/'hourly') |
+| `events`         | `Array`  | `[]`              | Array of ResourceEvent objects           |
+| `categories`     | `Array`  | `[]`              | Array of EventCategory objects           |
+| `workingHours`   | `Object` | `{}`              | Working hours configuration per day      |
+| `timeInterval`   | `Number` | `60`              | Time slot interval in minutes (15/30/60) |
+| `firstDayOfWeek` | `Number` | `0`               | First day of week (0=Sunday, 1=Monday)   |
+| `showAllDaySlot` | `Boolean`| `true`            | Show all-day events section              |
+| `theme`          | `String` | `'light'`         | Theme ('light' or 'dark')                |
+| `locale`         | `String` | `'en-US'`         | Locale for date/time formatting          |
+| `textLabels`     | `Object` | `{}`              | Custom text labels for UI elements       |
+
 ## 📡 Component Events
 
 ### 🏷️ HotelBookingCalendar Events
@@ -483,6 +644,18 @@ const availabilityData = [
 | `update:selectedMonth` | `Date`             | Month navigation changed |
 | `booking-click`        | `Booking`          | Existing booking clicked |
 | `booking-create`       | `{ roomId, date }` | Empty cell clicked       |
+
+### 📆 ResourceSchedulerCalendar Events
+
+| Event                  | Payload                      | Description                   |
+| ---------------------- | ---------------------------- | ----------------------------- |
+| `update:selectedDate`  | `Date`                       | Selected date changed         |
+| `update:view`          | `SchedulerViewType`          | View type changed             |
+| `event-click`          | `ResourceEvent`              | Event clicked                 |
+| `slot-click`           | `{ start, end, date, hour }` | Empty time slot clicked       |
+| `date-click`           | `string`                     | Date clicked (YYYY-MM-DD)     |
+| `view-change`          | `SchedulerViewType`          | View changed                  |
+| `date-range-change`    | `{ start, end }`             | Visible date range changed    |
 
 ## 🎯 TypeScript Support
 
@@ -507,6 +680,15 @@ import type {
   DashboardCalendarProps,
   DashboardCalendarEmits,
   DashboardTextLabels,
+} from 'vue-hotel-booking-calendar'
+
+// Resource Scheduler Types
+import type {
+  ResourceEvent,
+  EventCategory,
+  SchedulerViewType,
+  WorkingHours,
+  RecurrenceRule,
 } from 'vue-hotel-booking-calendar'
 
 // Text Label Interfaces
@@ -560,6 +742,49 @@ interface StatusConfig {
   backgroundColor: string // Cell background color
   darkBackgroundColor?: string // Optional dark theme background
 }
+
+// Resource Scheduler Data Models
+interface ResourceEvent {
+  id: string                    // Unique event identifier
+  title: string                 // Event title
+  start: string                 // Start datetime (ISO string)
+  end: string                   // End datetime (ISO string)
+  categoryId?: string           // Category ID for color coding
+  description?: string          // Optional description
+  allDay?: boolean              // All-day event flag
+  location?: string             // Optional location
+  recurrence?: RecurrenceRule   // Optional recurrence rule
+  backgroundColor?: string      // Custom background color
+  color?: string                // Custom text color
+}
+
+interface EventCategory {
+  id: string                    // Unique category identifier
+  name: string                  // Category display name
+  color: string                 // Text color
+  backgroundColor: string       // Background color
+  darkBackgroundColor?: string  // Dark theme background
+}
+
+interface RecurrenceRule {
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  interval?: number             // Every N periods (default: 1)
+  endDate?: string              // End date for recurrence
+  count?: number                // Number of occurrences
+  daysOfWeek?: number[]         // For weekly: 0=Sun, 1=Mon, etc.
+}
+
+interface WorkingHours {
+  monday?: { start: string; end: string; enabled: boolean }
+  tuesday?: { start: string; end: string; enabled: boolean }
+  wednesday?: { start: string; end: string; enabled: boolean }
+  thursday?: { start: string; end: string; enabled: boolean }
+  friday?: { start: string; end: string; enabled: boolean }
+  saturday?: { start: string; end: string; enabled: boolean }
+  sunday?: { start: string; end: string; enabled: boolean }
+}
+
+type SchedulerViewType = 'yearly' | 'monthly' | 'weekly' | 'daily' | 'hourly'
 ```
 
 ## 🎨 Custom Styling

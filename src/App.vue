@@ -45,6 +45,34 @@
           @booking-click="handleBookingClick" @booking-create="handleBookingCreate" />
       </div>
 
+      <!-- Resource Scheduler Calendar Demo -->
+      <div class="demo-section">
+        <h2>📅 Resource Scheduler Calendar</h2>
+        <p class="demo-description">
+          A comprehensive resource scheduling calendar with <strong>5 different views</strong>: Yearly, Monthly, Weekly, Daily, and Hourly.
+          <br><strong>Perfect for:</strong> Meeting rooms, equipment booking, staff scheduling, appointment management.
+          <br><strong>Features:</strong> Multiple views, working hours, event categories, time intervals (15/30/60 min), conflict detection.
+          <br><strong>Click on time slots</strong> to create events. <strong>Click on events</strong> to view details.
+        </p>
+        <ResourceSchedulerCalendar 
+          :events="schedulerEvents" 
+          :categories="eventCategories"
+          :selected-date="schedulerDate"
+          :view="schedulerView"
+          theme="light"
+          locale="en-US"
+          :time-interval="60"
+          :working-hours="{ start: 9, end: 18 }"
+          :show-all-day-slot="true"
+          :first-day-of-week="0"
+          @update:selected-date="schedulerDate = $event"
+          @update:view="schedulerView = $event"
+          @event-click="handleSchedulerEventClick"
+          @slot-click="handleSchedulerSlotClick"
+          @event-create="handleSchedulerEventCreate"
+        />
+      </div>
+
       <!-- Demo Features List -->
       <div class="demo-section">
         <h2>✨ Features Showcase</h2>
@@ -83,6 +111,7 @@
 import { ref, computed } from 'vue'
 import HotelBookingCalendar from './components/HotelBookingCalendar.vue'
 import HotelDashboardCalendar from './components/HotelDashboardCalendar.vue'
+import ResourceSchedulerCalendar from './components/ResourceSchedulerCalendar.vue'
 import type {
   DateAvailability,
   DateRange,
@@ -92,13 +121,21 @@ import type {
   Booking,
   StatusConfig,
   CalendarTextLabels,
-  DashboardTextLabels
+  DashboardTextLabels,
+  ResourceEvent,
+  EventCategory,
+  SchedulerViewType,
+  TimeSlot
 } from './types'
 
 // Guest calendar state
 const guestSelection = ref<DateRange>({ checkIn: null, checkOut: null })
 const dashboardMonth = ref(new Date())
 const today = new Date()
+
+// Resource Scheduler state
+const schedulerDate = ref(new Date())
+const schedulerView = ref<SchedulerViewType>('monthly')
 
 // Custom text labels for guest calendar - Simple demo language
 const guestCalendarLabels = ref<CalendarTextLabels>({
@@ -220,6 +257,155 @@ const sampleBookings = computed<Booking[]>(() => [
   }
 ])
 
+// Event categories for Resource Scheduler
+const eventCategories = computed<EventCategory[]>(() => [
+  {
+    id: 'meeting',
+    name: 'Meeting',
+    color: '#1e40af',
+    backgroundColor: '#dbeafe',
+    darkBackgroundColor: '#1e3a8a'
+  },
+  {
+    id: 'appointment',
+    name: 'Appointment',
+    color: '#047857',
+    backgroundColor: '#d1fae5',
+    darkBackgroundColor: '#064e3b'
+  },
+  {
+    id: 'maintenance',
+    name: 'Maintenance',
+    color: '#b45309',
+    backgroundColor: '#fef3c7',
+    darkBackgroundColor: '#78350f'
+  },
+  {
+    id: 'blocked',
+    name: 'Blocked',
+    color: '#dc2626',
+    backgroundColor: '#fee2e2',
+    darkBackgroundColor: '#7f1d1d'
+  }
+])
+
+// Sample events for Resource Scheduler
+const schedulerEvents = computed<ResourceEvent[]>(() => [
+  {
+    id: '1',
+    title: 'Team Standup',
+    description: 'Daily standup meeting with the development team',
+    start: `${getDynamicDate(0)}T09:00:00`,
+    end: `${getDynamicDate(0)}T09:30:00`,
+    categoryId: 'meeting',
+    location: 'Conference Room A'
+  },
+  {
+    id: '2',
+    title: 'Project Review',
+    description: 'Quarterly project review with stakeholders',
+    start: `${getDynamicDate(0)}T14:00:00`,
+    end: `${getDynamicDate(0)}T16:00:00`,
+    categoryId: 'meeting',
+    location: 'Board Room'
+  },
+  {
+    id: '3',
+    title: 'Client Call',
+    description: 'Follow-up call with ABC Corp',
+    start: `${getDynamicDate(1)}T10:00:00`,
+    end: `${getDynamicDate(1)}T11:00:00`,
+    categoryId: 'appointment'
+  },
+  {
+    id: '4',
+    title: 'System Maintenance',
+    description: 'Scheduled server maintenance window',
+    start: `${getDynamicDate(2)}T22:00:00`,
+    end: `${getDynamicDate(3)}T02:00:00`,
+    categoryId: 'maintenance'
+  },
+  {
+    id: '5',
+    title: 'Training Session',
+    description: 'New employee onboarding',
+    start: `${getDynamicDate(3)}T09:00:00`,
+    end: `${getDynamicDate(3)}T12:00:00`,
+    categoryId: 'meeting',
+    location: 'Training Room'
+  },
+  {
+    id: '6',
+    title: 'Equipment Reserved',
+    start: `${getDynamicDate(4)}T00:00:00`,
+    end: `${getDynamicDate(4)}T23:59:59`,
+    allDay: true,
+    categoryId: 'blocked'
+  },
+  {
+    id: '7',
+    title: 'Sprint Planning',
+    description: 'Plan sprint 24 tasks and priorities',
+    start: `${getDynamicDate(7)}T13:00:00`,
+    end: `${getDynamicDate(7)}T15:00:00`,
+    categoryId: 'meeting',
+    location: 'Conference Room B'
+  },
+  {
+    id: '8',
+    title: 'Doctor Appointment',
+    start: `${getDynamicDate(5)}T11:30:00`,
+    end: `${getDynamicDate(5)}T12:30:00`,
+    categoryId: 'appointment',
+    location: 'Medical Center'
+  },
+  // RECURRING EVENTS EXAMPLES
+  {
+    id: '9',
+    title: '🔄 Daily Standup (Recurring)',
+    description: 'Recurring daily standup - every weekday',
+    start: `${getDynamicDate(0)}T09:00:00`,
+    end: `${getDynamicDate(0)}T09:15:00`,
+    categoryId: 'meeting',
+    location: 'Virtual',
+    recurrence: {
+      frequency: 'daily',
+      interval: 1,
+      endAfterOccurrences: 30
+    }
+  },
+  {
+    id: '10',
+    title: '🔄 Weekly Team Sync (Recurring)',
+    description: 'Recurring weekly team sync every Monday and Wednesday',
+    start: `${getDynamicDate(0)}T14:00:00`,
+    end: `${getDynamicDate(0)}T15:00:00`,
+    categoryId: 'meeting',
+    location: 'Conference Room A',
+    recurrence: {
+      frequency: 'weekly',
+      interval: 1,
+      daysOfWeek: [1, 3], // Monday and Wednesday
+      endAfterOccurrences: 12
+    }
+  },
+  {
+    id: '11',
+    title: '🔄 Monthly Report (Recurring)',
+    description: 'Monthly status report - 15th of each month',
+    start: `${getDynamicDate(0)}T10:00:00`,
+    end: `${getDynamicDate(0)}T11:00:00`,
+    categoryId: 'appointment',
+    location: 'Board Room',
+    recurrence: {
+      frequency: 'monthly',
+      interval: 1,
+      dayOfMonth: 15,
+      endAfterOccurrences: 6
+    }
+  }
+])
+
 // Custom status configuration example
 const customStatusConfig = computed<StatusConfig[]>(() => [
   {
@@ -290,6 +476,20 @@ const handleBookingClick = (booking: Booking) => {
 const handleBookingCreate = (data: { roomId: string; date: string }) => {
   const room = sampleRooms.value.find(r => r.id === data.roomId)
   alert(`Create new booking:\nRoom: ${room?.number}\nDate: ${formatDate(new Date(data.date))}\n\n(Parent component would show booking form here)`)
+}
+
+// Event handlers for Resource Scheduler
+const handleSchedulerEventClick = (event: ResourceEvent) => {
+  const category = eventCategories.value.find(c => c.id === event.categoryId)
+  alert(`Event Details:\n\nTitle: ${event.title}\nDescription: ${event.description || 'N/A'}\nCategory: ${category?.name || 'None'}\nLocation: ${event.location || 'N/A'}\nStart: ${new Date(event.start).toLocaleString()}\nEnd: ${new Date(event.end).toLocaleString()}`)
+}
+
+const handleSchedulerSlotClick = (slot: TimeSlot) => {
+  alert(`Create new event:\n\nDate: ${slot.date}\nStart: ${new Date(slot.start).toLocaleTimeString()}\nEnd: ${new Date(slot.end).toLocaleTimeString()}\n\n(Would open event creation form)`)
+}
+
+const handleSchedulerEventCreate = (data: { start: string; end: string; allDay?: boolean }) => {
+  alert(`New event request:\n\nStart: ${data.start}\nEnd: ${data.end}\nAll Day: ${data.allDay ? 'Yes' : 'No'}\n\n(Would open event creation form)`)
 }
 
 // Utility functions
