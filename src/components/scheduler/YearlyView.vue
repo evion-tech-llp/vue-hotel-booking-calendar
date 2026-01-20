@@ -81,9 +81,14 @@ interface Props {
   theme: 'light' | 'dark'
   locale: string
   categories: EventCategory[]
+  highlightToday?: boolean
+  firstDayOfWeek?: number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  highlightToday: true,
+  firstDayOfWeek: 0
+})
 
 const emit = defineEmits<{
   'month-click': [month: number]
@@ -93,12 +98,13 @@ const emit = defineEmits<{
 const weekdayHeaders = computed(() => {
   const formatter = new Intl.DateTimeFormat(props.locale, { weekday: 'narrow' })
   const days: string[] = []
-  
+
   for (let i = 0; i < 7; i++) {
-    const date = new Date(2023, 0, 1 + i)
+    const dayIndex = (props.firstDayOfWeek + i) % 7
+    const date = new Date(2023, 0, 1 + dayIndex)
     days.push(formatter.format(date))
   }
-  
+
   return days
 })
 
@@ -227,12 +233,12 @@ const getTopCategories = (month: SchedulerMonth): EventCategory[] => {
 
 const getDayClasses = (month: SchedulerMonth, day: number): Record<string, boolean> => {
   const today = new Date()
-  const isToday = today.getFullYear() === props.year 
-    && today.getMonth() === month.month 
+  const isToday = props.highlightToday && today.getFullYear() === props.year
+    && today.getMonth() === month.month
     && today.getDate() === day
-  
+
   const hasEvent = getMonthEventDays(month).includes(day)
-  
+
   return {
     'is-today': isToday,
     'has-event': hasEvent

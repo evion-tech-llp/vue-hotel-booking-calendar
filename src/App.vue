@@ -3,12 +3,12 @@
     <div class="demo-container">
       <h1>Vue Hotel Booking Calendar Demo</h1>
       <div class="version-badge">
-        <span class="version-tag">v1.0.11</span>
+        <span class="version-tag">v1.2.0</span>
         <span class="version-label">Latest Release</span>
       </div>
       <p class="demo-intro">
-        Interactive demo showcasing the new v1.0.2 features including price calculation, booking flow, and the new hotel
-        dashboard component.
+        Interactive demo showcasing all features including the enhanced ResourceSchedulerCalendar with configurable props,
+        price calculation, booking flow, and the hotel dashboard component.
         <br><strong>All dates are dynamically generated</strong> relative to today ({{ formatDate(today) }}) so the demo
         stays current!
       </p>
@@ -52,10 +52,11 @@
           A comprehensive resource scheduling calendar with <strong>5 different views</strong>: Yearly, Monthly, Weekly, Daily, and Hourly.
           <br><strong>Perfect for:</strong> Meeting rooms, equipment booking, staff scheduling, appointment management.
           <br><strong>Features:</strong> Multiple views, working hours, event categories, time intervals (15/30/60 min), conflict detection.
+          <br><strong>New in v1.2.0:</strong> Configurable views, slot heights, responsive breakpoints, header/legend options, compact mode.
           <br><strong>Click on time slots</strong> to create events. <strong>Click on events</strong> to view details.
         </p>
-        <ResourceSchedulerCalendar 
-          :events="schedulerEvents" 
+        <ResourceSchedulerCalendar
+          :events="schedulerEvents"
           :categories="eventCategories"
           :selected-date="schedulerDate"
           :view="schedulerView"
@@ -64,12 +65,47 @@
           :time-interval="60"
           :working-hours="{ start: 9, end: 18 }"
           :show-all-day-slot="true"
-          :first-day-of-week="0"
+          :first-day-of-week="1"
+          :enabled-views="['yearly', 'monthly', 'weekly', 'daily', 'hourly']"
+          :slot-height="{ hourly: 60, daily: 48, weekly: 48 }"
+          :header-options="{ showNavigation: true, showToday: true, showViewSwitcher: true, showTitle: true }"
+          :legend-options="{ show: true, position: 'bottom' }"
+          :highlight-today="true"
+          :highlight-weekends="true"
+          :show-current-time-indicator="true"
+          :max-events-per-slot="3"
+          :show-week-numbers="true"
           @update:selected-date="schedulerDate = $event"
           @update:view="schedulerView = $event"
           @event-click="handleSchedulerEventClick"
           @slot-click="handleSchedulerSlotClick"
           @event-create="handleSchedulerEventCreate"
+        />
+      </div>
+
+      <!-- Compact Mode Demo -->
+      <div class="demo-section">
+        <h2>📱 Compact Mode Demo</h2>
+        <p class="demo-description">
+          The same scheduler in <strong>compact mode</strong> - perfect for smaller screens or sidebars.
+          <br>Only showing Monthly and Weekly views with minimal UI.
+        </p>
+        <ResourceSchedulerCalendar
+          :events="schedulerEvents"
+          :categories="eventCategories"
+          :selected-date="schedulerDate"
+          view="monthly"
+          theme="light"
+          locale="en-US"
+          :enabled-views="['monthly', 'weekly']"
+          :compact-mode="true"
+          :header-options="{ showNavigation: true, showToday: true, showViewSwitcher: true, showTitle: true }"
+          :legend-options="{ show: false }"
+          :highlight-today="true"
+          :max-events-per-slot="2"
+          @update:selected-date="schedulerDate = $event"
+          @event-click="handleSchedulerEventClick"
+          @slot-click="handleSchedulerSlotClick"
         />
       </div>
 

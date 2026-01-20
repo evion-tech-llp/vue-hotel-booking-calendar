@@ -232,6 +232,34 @@ export interface WorkingHours {
   daysOfWeek?: number[] // 0-6, defaults to Mon-Fri
 }
 
+// Responsive breakpoint configuration
+export interface ResponsiveBreakpoints {
+  mobile?: number // Default: 480
+  tablet?: number // Default: 768
+  desktop?: number // Default: 1024
+}
+
+// Slot height configuration for time-based views
+export interface SlotHeightConfig {
+  hourly?: number // Height in pixels for hourly slots (default: 60)
+  daily?: number // Height in pixels for daily view slots (default: 48)
+  weekly?: number // Height in pixels for weekly view slots (default: 48)
+}
+
+// Header display options
+export interface HeaderOptions {
+  showNavigation?: boolean // Show prev/next buttons (default: true)
+  showToday?: boolean // Show today button (default: true)
+  showViewSwitcher?: boolean // Show view toggle buttons (default: true)
+  showTitle?: boolean // Show period title (default: true)
+}
+
+// Legend display options
+export interface LegendOptions {
+  show?: boolean // Show legend (default: true when categories exist)
+  position?: 'top' | 'bottom' // Legend position (default: 'bottom')
+}
+
 // Scheduler Calendar Props
 export interface SchedulerCalendarProps {
   events?: ResourceEvent[]
@@ -251,6 +279,20 @@ export interface SchedulerCalendarProps {
   maxDate?: string | Date
   textLabels?: SchedulerTextLabels
   firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6 // 0 = Sunday, 1 = Monday, etc.
+
+  // New enhanced props
+  enabledViews?: SchedulerViewType[] // Which views to show in view switcher (default: all)
+  defaultView?: SchedulerViewType // Initial view on load (default: 'monthly')
+  slotHeight?: SlotHeightConfig // Configurable slot heights for time-based views
+  responsiveBreakpoints?: ResponsiveBreakpoints // Custom breakpoints for responsive behavior
+  headerOptions?: HeaderOptions // Control header element visibility
+  legendOptions?: LegendOptions // Control legend display
+  showCurrentTimeIndicator?: boolean // Show current time line in time-based views (default: true)
+  highlightToday?: boolean // Highlight today's date (default: true)
+  highlightWeekends?: boolean // Highlight weekend days (default: false)
+  maxEventsPerSlot?: number // Max events shown before "+X more" in monthly view (default: 3)
+  eventMinHeight?: number // Minimum height for events in pixels (default: 20)
+  compactMode?: boolean // Condensed UI for smaller screens (default: false)
 }
 
 // Scheduler Calendar Emits

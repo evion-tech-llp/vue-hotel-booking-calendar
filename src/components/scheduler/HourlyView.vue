@@ -1,5 +1,5 @@
 <template>
-  <div class="hourly-view" :class="[`theme-${theme}`]">
+  <div class="hourly-view" :class="[`theme-${theme}`]" :style="{ '--slot-height': `${slotHeight}px`, '--event-min-height': `${eventMinHeight}px` }">
     <!-- Day Header -->
     <div class="day-info-header">
       <div class="date-info">
@@ -58,7 +58,7 @@
             @click="handleSlotClick(slot)"
           >
             <!-- Current Time Indicator -->
-            <div v-if="isCurrentSlot(slot)" class="current-time-line" :style="{ top: `${currentMinuteInSlot}%` }">
+            <div v-if="showCurrentTimeIndicator && isCurrentSlot(slot)" class="current-time-line" :style="{ top: `${currentMinuteInSlot}%` }">
               <div class="time-marker"></div>
             </div>
 
@@ -125,9 +125,16 @@ interface Props {
   categories: EventCategory[]
   workingHours: WorkingHours
   timeInterval: TimeInterval
+  showCurrentTimeIndicator?: boolean
+  slotHeight?: number
+  eventMinHeight?: number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  showCurrentTimeIndicator: true,
+  slotHeight: 60,
+  eventMinHeight: 20
+})
 
 const emit = defineEmits<{
   'event-click': [event: ResourceEvent]
