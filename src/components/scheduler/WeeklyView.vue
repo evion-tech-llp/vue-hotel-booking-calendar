@@ -1,5 +1,5 @@
 <template>
-  <div class="weekly-view" :class="[`theme-${theme}`]">
+  <div class="weekly-view" :class="[`theme-${theme}`]" :style="{ '--slot-height': `${computedSlotHeight}px`, '--event-min-height': `${eventMinHeight}px` }">
     <!-- Header with Day Names -->
     <div class="week-header">
       <div class="time-column-header"></div>
@@ -7,10 +7,10 @@
         v-for="day in weekDays"
         :key="day.dateString"
         class="day-column-header"
-        :class="{ 'is-today': day.isToday, 'is-weekend': day.isWeekend }"
+        :class="{ 'is-today': highlightToday && day.isToday, 'is-weekend': highlightWeekends && day.isWeekend }"
       >
         <div class="day-name">{{ day.weekdayShort }}</div>
-        <div class="day-number" :class="{ 'today-number': day.isToday }">
+        <div class="day-number" :class="{ 'today-number': highlightToday && day.isToday }">
           {{ day.date.getDate() }}
         </div>
       </div>
@@ -23,7 +23,7 @@
         v-for="day in weekDays"
         :key="`allday-${day.dateString}`"
         class="all-day-cell"
-        :class="{ 'is-today': day.isToday }"
+        :class="{ 'is-today': highlightToday && day.isToday }"
         @click="handleAllDayClick(day)"
       >
         <div
@@ -52,8 +52,8 @@
               class="time-slot"
               :class="{
                 'working-hour': isWorkingHour(hour),
-                'is-today': day.isToday,
-                'is-weekend': day.isWeekend
+                'is-today': highlightToday && day.isToday,
+                'is-weekend': highlightWeekends && day.isWeekend
               }"
               @click="handleSlotClick(day, hour)"
             >
@@ -61,7 +61,7 @@
                 v-for="event in getEventsForSlot(day.dateString, hour)"
                 :key="event.id"
                 class="slot-event"
-                :style="getPositionedEventStyle(event, day.dateString, hour)"
+                :style="getPositionedEventStyle(event)"
                 @click.stop="handleEventClick(event)"
               >
                 <div class="event-title">{{ event.title }}</div>
@@ -97,9 +97,20 @@ interface Props {
   timeInterval: TimeInterval
   firstDayOfWeek: number
   showAllDaySlot: boolean
+  highlightToday?: boolean
+  highlightWeekends?: boolean
+  showCurrentTimeIndicator?: boolean
+  slotHeight?: number
+  eventMinHeight?: number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  highlightToday: true,
+  highlightWeekends: false,
+  showCurrentTimeIndicator: true,
+  slotHeight: 48,
+  eventMinHeight: 20
+})
 
 const emit = defineEmits<{
   'date-click': [dateString: string]
@@ -107,11 +118,12 @@ const emit = defineEmits<{
   'slot-click': [slot: { start: string; end: string; date: string; hour: number }]
 }>()
 
-const slotHeight = computed(() => {
+const computedSlotHeight = computed(() => {
+  if (props.slotHeight) return props.slotHeight
   switch (props.timeInterval) {
     case 15: return 20
     case 30: return 30
-    default: return 50
+    default: return 48
   }
 })
 
@@ -195,13 +207,12 @@ const getAllDayEventsForDay = (dateString: string): ResourceEvent[] => {
 const getEventsForSlot = (dateString: string, hour: number): ResourceEvent[] => {
   return props.events.filter(event => {
     if (event.allDay) return false
-    
+
     const eventStart = new Date(event.start)
-    const eventEnd = new Date(event.end)
     const slotStart = new Date(`${dateString}T${String(hour).padStart(2, '0')}:00:00`)
     const slotEnd = new Date(slotStart)
     slotEnd.setHours(slotEnd.getHours() + 1)
-    
+
     return eventStart >= slotStart && eventStart < slotEnd
   })
 }
@@ -227,18 +238,18 @@ const getEventStyle = (event: ResourceEvent): Record<string, string> => {
   }
 }
 
-const getPositionedEventStyle = (event: ResourceEvent, dateString: string, slotHour: number): Record<string, string> => {
+const getPositionedEventStyle = (event: ResourceEvent): Record<string, string> => {
   const baseStyle = getEventStyle(event)
   
   const eventStart = new Date(event.start)
   const eventEnd = new Date(event.end)
   
   const minuteOffset = eventStart.getMinutes()
-  const topOffset = (minuteOffset / 60) * slotHeight.value
-  
+  const topOffset = (minuteOffset / 60) * computedSlotHeight.value
+
   const durationMs = eventEnd.getTime() - eventStart.getTime()
   const durationHours = durationMs / (1000 * 60 * 60)
-  const height = Math.max(durationHours * slotHeight.value, 20)
+  const height = Math.max(durationHours * computedSlotHeight.value, props.eventMinHeight)
   
   return {
     ...baseStyle,

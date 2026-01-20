@@ -1,6 +1,6 @@
 {
   "name": "vue-hotel-booking-calendar",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "description": "A Vue 3 calendar component suite featuring hotel booking calendars, dashboard management, and resource scheduler with yearly/monthly/weekly/daily/hourly views. Includes price calculation, recurring events, event categories, working hours, and full internationalization support.",
   "main": "dist/vue-hotel-booking-calendar.umd.cjs",

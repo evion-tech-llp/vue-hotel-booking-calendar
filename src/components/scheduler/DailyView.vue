@@ -1,9 +1,9 @@
 <template>
-  <div class="daily-view" :class="[`theme-${theme}`]">
+  <div class="daily-view" :class="[`theme-${theme}`]" :style="{ '--slot-height': `${slotHeight}px`, '--event-min-height': `${eventMinHeight}px` }">
     <!-- Day Header -->
     <div class="day-header-section">
       <div class="weekday-label">{{ dayInfo.weekday }}</div>
-      <div class="date-display" :class="{ 'is-today': dayInfo.isToday }">
+      <div class="date-display" :class="{ 'is-today': highlightToday && dayInfo.isToday }">
         {{ dayInfo.dayNumber }}
       </div>
     </div>
@@ -45,7 +45,7 @@
             @click="handleSlotClick(hour)"
           >
             <!-- Current Time Indicator -->
-            <div v-if="isCurrentHour(hour)" class="current-time-indicator" :style="{ top: `${currentMinuteOffset}%` }">
+            <div v-if="showCurrentTimeIndicator && isCurrentHour(hour)" class="current-time-indicator" :style="{ top: `${currentMinuteOffset}%` }">
               <div class="time-dot"></div>
             </div>
 
@@ -94,9 +94,18 @@ interface Props {
   workingHours: WorkingHours
   timeInterval: TimeInterval
   showAllDaySlot: boolean
+  highlightToday?: boolean
+  showCurrentTimeIndicator?: boolean
+  slotHeight?: number
+  eventMinHeight?: number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  highlightToday: true,
+  showCurrentTimeIndicator: true,
+  slotHeight: 48,
+  eventMinHeight: 20
+})
 
 const emit = defineEmits<{
   'event-click': [event: ResourceEvent]
@@ -429,7 +438,7 @@ const handleEventClick = (event: ResourceEvent) => {
 
 .hour-slot {
   position: relative;
-  min-height: 60px;
+  min-height: var(--slot-height, 48px);
   padding: 4px 8px;
   background: white;
   cursor: pointer;

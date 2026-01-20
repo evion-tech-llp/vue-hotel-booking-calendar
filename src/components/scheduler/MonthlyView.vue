@@ -1,53 +1,63 @@
 <template>
-  <div class="monthly-view" :class="[`theme-${theme}`]">
+  <div class="monthly-view" :class="[`theme-${theme}`, { 'show-week-numbers': showWeekNumbers }]">
     <!-- Weekday Headers -->
     <div class="weekday-headers">
+      <div v-if="showWeekNumbers" class="weekday-header week-number-header">Wk</div>
       <div v-for="day in weekdayHeaders" :key="day" class="weekday-header">
         {{ day }}
       </div>
     </div>
 
     <!-- Calendar Grid -->
-    <div class="calendar-grid">
-      <div
-        v-for="day in calendarDays"
-        :key="day.dateString"
-        class="day-cell"
-        :class="{
-          'other-month': !day.isCurrentMonth,
-          'today': day.isToday,
-          'weekend': day.isWeekend,
-          'selected': isSelected(day.dateString)
-        }"
-        @click="handleDayClick(day)"
-      >
-        <!-- Day Number -->
-        <div class="day-header">
-          <span class="day-number" :class="{ 'today-number': day.isToday }">
-            {{ day.date.getDate() }}
-          </span>
-          <span v-if="getEventsForDay(day.dateString).length > 3" class="more-events">
-            +{{ getEventsForDay(day.dateString).length - 3 }}
-          </span>
+    <div class="calendar-grid" :class="{ 'with-week-numbers': showWeekNumbers }">
+      <template v-for="(day, index) in calendarDays" :key="day.dateString">
+        <!-- Week Number Column -->
+        <div
+          v-if="showWeekNumbers && index % 7 === 0"
+          class="week-number-cell"
+        >
+          {{ getWeekNumber(day.date) }}
         </div>
 
-        <!-- Events List -->
-        <div class="events-list">
-          <div
-            v-for="event in getEventsForDay(day.dateString).slice(0, 3)"
-            :key="event.id"
-            class="event-item"
-            :style="getEventStyle(event)"
-            :title="event.title"
-            @click.stop="handleEventClick(event)"
-          >
-            <span v-if="!event.allDay" class="event-time">
-              {{ formatEventTime(event.start) }}
+        <!-- Day Cell -->
+        <div
+          class="day-cell"
+          :class="{
+            'other-month': !day.isCurrentMonth,
+            'today': highlightToday && day.isToday,
+            'weekend': highlightWeekends && day.isWeekend,
+            'selected': isSelected(day.dateString)
+          }"
+          @click="handleDayClick(day)"
+        >
+          <!-- Day Number -->
+          <div class="day-header">
+            <span class="day-number" :class="{ 'today-number': highlightToday && day.isToday }">
+              {{ day.date.getDate() }}
             </span>
-            {{ event.title }}
+            <span v-if="getEventsForDay(day.dateString).length > maxEventsPerSlot" class="more-events">
+              +{{ getEventsForDay(day.dateString).length - maxEventsPerSlot }}
+            </span>
+          </div>
+
+          <!-- Events List -->
+          <div class="events-list">
+            <div
+              v-for="event in getEventsForDay(day.dateString).slice(0, maxEventsPerSlot)"
+              :key="event.id"
+              class="event-item"
+              :style="getEventStyle(event)"
+              :title="event.title"
+              @click.stop="handleEventClick(event)"
+            >
+              <span v-if="!event.allDay" class="event-time">
+                {{ formatEventTime(event.start) }}
+              </span>
+              {{ event.title }}
+            </div>
           </div>
         </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
@@ -63,9 +73,18 @@ interface Props {
   locale: string
   categories: EventCategory[]
   firstDayOfWeek: number
+  highlightToday?: boolean
+  highlightWeekends?: boolean
+  maxEventsPerSlot?: number
+  showWeekNumbers?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  highlightToday: true,
+  highlightWeekends: false,
+  maxEventsPerSlot: 3,
+  showWeekNumbers: false
+})
 
 const emit = defineEmits<{
   'date-click': [dateString: string]
@@ -224,6 +243,15 @@ const handleDayClick = (day: SchedulerDay) => {
 const handleEventClick = (event: ResourceEvent) => {
   emit('event-click', event)
 }
+
+// Get ISO week number
+const getWeekNumber = (date: Date): number => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+  const dayNum = d.getUTCDay() || 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+}
 </script>
 
 <style scoped>
@@ -237,6 +265,14 @@ const handleEventClick = (event: ResourceEvent) => {
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
   margin-bottom: 4px;
+}
+
+.show-week-numbers .weekday-headers {
+  grid-template-columns: 32px repeat(7, 1fr);
+}
+
+.week-number-header {
+  font-size: 10px !important;
 }
 
 .weekday-header {
@@ -261,6 +297,27 @@ const handleEventClick = (event: ResourceEvent) => {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
+}
+
+.calendar-grid.with-week-numbers {
+  grid-template-columns: 32px repeat(7, 1fr);
+}
+
+.week-number-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f8fafc;
+  border-radius: 4px;
+  min-height: 80px;
+}
+
+.theme-dark .week-number-cell {
+  color: #94a3b8;
+  background: #0f172a;
 }
 
 .day-cell {

@@ -1,29 +1,56 @@
 <template>
-  <div class="resource-scheduler-calendar" :class="[`theme-${theme}`]">
+  <div
+    class="resource-scheduler-calendar"
+    :class="[
+      `theme-${theme}`,
+      { 'compact-mode': compactMode },
+      { 'highlight-weekends': highlightWeekends }
+    ]"
+    :style="cssVariables"
+  >
+    <!-- Legend (Top Position) -->
+    <div
+      v-if="showLegend && legendPosition === 'top'"
+      class="scheduler-legend legend-top"
+    >
+      <div v-for="category in categories" :key="category.id" class="legend-item">
+        <div
+          class="legend-color"
+          :style="{
+            backgroundColor: theme === 'dark' && category.darkBackgroundColor
+              ? category.darkBackgroundColor
+              : category.backgroundColor,
+            borderColor: category.color
+          }"
+        ></div>
+        <span>{{ category.name }}</span>
+      </div>
+    </div>
+
     <!-- Header with Navigation and View Switcher -->
-    <div class="scheduler-header">
+    <div v-if="showHeader" class="scheduler-header">
       <!-- Navigation Controls -->
-      <div class="nav-controls">
+      <div v-if="showNavigation" class="nav-controls">
         <button type="button" @click="navigatePrevious" class="nav-btn" :aria-label="labels.previousPeriod">
-          <span class="nav-arrow">‹</span>
+          <span class="nav-arrow">&#8249;</span>
         </button>
-        
-        <button type="button" @click="goToToday" class="today-btn">
+
+        <button v-if="showTodayButton" type="button" @click="goToToday" class="today-btn">
           {{ labels.today }}
         </button>
-        
+
         <button type="button" @click="navigateNext" class="nav-btn" :aria-label="labels.nextPeriod">
-          <span class="nav-arrow">›</span>
+          <span class="nav-arrow">&#8250;</span>
         </button>
       </div>
 
       <!-- Current Period Title -->
-      <h2 class="period-title">{{ currentPeriodTitle }}</h2>
+      <h2 v-if="showTitle" class="period-title">{{ currentPeriodTitle }}</h2>
 
       <!-- View Switcher -->
-      <div class="view-switcher">
+      <div v-if="showViewSwitcher && filteredViewOptions.length > 1" class="view-switcher">
         <button
-          v-for="viewOption in viewOptions"
+          v-for="viewOption in filteredViewOptions"
           :key="viewOption.value"
           type="button"
           @click="switchView(viewOption.value)"
@@ -41,10 +68,12 @@
       <YearlyView
         v-if="currentView === 'yearly'"
         :year="currentYear"
-        :events="expandedEvents"
+        :events="events"
         :theme="theme"
         :locale="locale"
         :categories="categories"
+        :highlight-today="highlightToday"
+        :first-day-of-week="firstDayOfWeek"
         @month-click="handleMonthClick"
         @date-click="handleDateClick"
       />
@@ -53,11 +82,15 @@
       <MonthlyView
         v-else-if="currentView === 'monthly'"
         :current-date="currentDate"
-        :events="expandedEvents"
+        :events="events"
         :theme="theme"
         :locale="locale"
         :categories="categories"
         :first-day-of-week="firstDayOfWeek"
+        :highlight-today="highlightToday"
+        :highlight-weekends="highlightWeekends"
+        :max-events-per-slot="maxEventsPerSlot"
+        :show-week-numbers="showWeekNumbers"
         @date-click="handleDateClick"
         @event-click="handleEventClick"
         @slot-click="handleSlotClick"
@@ -67,7 +100,7 @@
       <WeeklyView
         v-else-if="currentView === 'weekly'"
         :current-date="currentDate"
-        :events="expandedEvents"
+        :events="events"
         :theme="theme"
         :locale="locale"
         :categories="categories"
@@ -75,6 +108,11 @@
         :time-interval="timeInterval"
         :first-day-of-week="firstDayOfWeek"
         :show-all-day-slot="showAllDaySlot"
+        :highlight-today="highlightToday"
+        :highlight-weekends="highlightWeekends"
+        :show-current-time-indicator="showCurrentTimeIndicator"
+        :slot-height="resolvedSlotHeight.weekly"
+        :event-min-height="eventMinHeight"
         @date-click="handleDateClick"
         @event-click="handleEventClick"
         @slot-click="handleSlotClick"
@@ -84,13 +122,17 @@
       <DailyView
         v-else-if="currentView === 'daily'"
         :current-date="currentDate"
-        :events="expandedEvents"
+        :events="events"
         :theme="theme"
         :locale="locale"
         :categories="categories"
         :working-hours="workingHours"
         :time-interval="timeInterval"
         :show-all-day-slot="showAllDaySlot"
+        :highlight-today="highlightToday"
+        :show-current-time-indicator="showCurrentTimeIndicator"
+        :slot-height="resolvedSlotHeight.daily"
+        :event-min-height="eventMinHeight"
         @event-click="handleEventClick"
         @slot-click="handleSlotClick"
       />
@@ -99,27 +141,33 @@
       <HourlyView
         v-else-if="currentView === 'hourly'"
         :current-date="currentDate"
-        :events="expandedEvents"
+        :events="events"
         :theme="theme"
         :locale="locale"
         :categories="categories"
         :working-hours="workingHours"
         :time-interval="timeInterval"
+        :show-current-time-indicator="showCurrentTimeIndicator"
+        :slot-height="resolvedSlotHeight.hourly"
+        :event-min-height="eventMinHeight"
         @event-click="handleEventClick"
         @slot-click="handleSlotClick"
       />
     </div>
 
-    <!-- Legend -->
-    <div v-if="categories && categories.length > 0" class="scheduler-legend">
+    <!-- Legend (Bottom Position - Default) -->
+    <div
+      v-if="showLegend && legendPosition === 'bottom'"
+      class="scheduler-legend legend-bottom"
+    >
       <div v-for="category in categories" :key="category.id" class="legend-item">
-        <div 
+        <div
           class="legend-color"
-          :style="{ 
-            backgroundColor: theme === 'dark' && category.darkBackgroundColor 
-              ? category.darkBackgroundColor 
+          :style="{
+            backgroundColor: theme === 'dark' && category.darkBackgroundColor
+              ? category.darkBackgroundColor
               : category.backgroundColor,
-            borderColor: category.color 
+            borderColor: category.color
           }"
         ></div>
         <span>{{ category.name }}</span>
@@ -130,13 +178,12 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { 
-  SchedulerCalendarProps, 
+import type {
+  SchedulerCalendarProps,
   SchedulerCalendarEmits,
   SchedulerViewType,
   ResourceEvent,
-  TimeSlot,
-  RecurrencePattern
+  TimeSlot
 } from '../types'
 
 // Sub-components
@@ -145,175 +192,6 @@ import MonthlyView from './scheduler/MonthlyView.vue'
 import WeeklyView from './scheduler/WeeklyView.vue'
 import DailyView from './scheduler/DailyView.vue'
 import HourlyView from './scheduler/HourlyView.vue'
-
-// ============================================================================
-// Recurring Events Expansion Utility
-// ============================================================================
-
-/**
- * Expands recurring events into individual occurrences within a date range
- */
-const expandRecurringEvents = (
-  events: ResourceEvent[],
-  rangeStart: Date,
-  rangeEnd: Date,
-  maxOccurrences: number = 365 // Safety limit
-): ResourceEvent[] => {
-  const expandedEvents: ResourceEvent[] = []
-
-  events.forEach(event => {
-    if (!event.recurrence) {
-      // Non-recurring event - include if it overlaps with the range
-      const eventStart = new Date(event.start)
-      const eventEnd = new Date(event.end)
-      if (eventStart <= rangeEnd && eventEnd >= rangeStart) {
-        expandedEvents.push(event)
-      }
-      return
-    }
-
-    // Expand recurring event
-    const occurrences = generateOccurrences(event, rangeStart, rangeEnd, maxOccurrences)
-    expandedEvents.push(...occurrences)
-  })
-
-  return expandedEvents
-}
-
-/**
- * Generates occurrences for a recurring event within a date range
- */
-const generateOccurrences = (
-  event: ResourceEvent,
-  rangeStart: Date,
-  rangeEnd: Date,
-  maxOccurrences: number
-): ResourceEvent[] => {
-  const occurrences: ResourceEvent[] = []
-  const recurrence = event.recurrence!
-  
-  const eventStart = new Date(event.start)
-  const eventEnd = new Date(event.end)
-  const duration = eventEnd.getTime() - eventStart.getTime()
-  
-  // Determine the end of recurrence
-  let recurrenceEnd = rangeEnd
-  if (recurrence.endDate) {
-    const endDate = new Date(recurrence.endDate)
-    if (endDate < recurrenceEnd) {
-      recurrenceEnd = endDate
-    }
-  }
-
-  let currentDate = new Date(eventStart)
-  let occurrenceCount = 0
-  const maxCount = recurrence.endAfterOccurrences || maxOccurrences
-
-  while (currentDate <= recurrenceEnd && occurrenceCount < maxCount) {
-    // Check if this occurrence is within the visible range
-    if (currentDate >= rangeStart || new Date(currentDate.getTime() + duration) >= rangeStart) {
-      if (shouldIncludeOccurrence(currentDate, recurrence)) {
-        const occurrenceStart = new Date(currentDate)
-        const occurrenceEnd = new Date(currentDate.getTime() + duration)
-
-        occurrences.push({
-          ...event,
-          id: `${event.id}_${occurrenceStart.toISOString()}`,
-          start: occurrenceStart.toISOString(),
-          end: occurrenceEnd.toISOString(),
-          // Mark as recurring instance
-          metadata: {
-            ...event.metadata,
-            isRecurringInstance: true,
-            originalEventId: event.id,
-            occurrenceDate: occurrenceStart.toISOString()
-          }
-        })
-        occurrenceCount++
-      }
-    }
-
-    // Move to next occurrence based on frequency
-    currentDate = getNextOccurrenceDate(currentDate, recurrence)
-    
-    // Safety check to prevent infinite loops
-    if (occurrenceCount > maxOccurrences) break
-  }
-
-  return occurrences
-}
-
-/**
- * Check if the current date should be included based on recurrence rules
- */
-const shouldIncludeOccurrence = (date: Date, recurrence: RecurrencePattern): boolean => {
-  // For weekly recurrence with specific days of week
-  if (recurrence.frequency === 'weekly' && recurrence.daysOfWeek && recurrence.daysOfWeek.length > 0) {
-    return recurrence.daysOfWeek.includes(date.getDay())
-  }
-
-  // For monthly recurrence with specific day of month
-  if (recurrence.frequency === 'monthly' && recurrence.dayOfMonth) {
-    return date.getDate() === recurrence.dayOfMonth
-  }
-
-  return true
-}
-
-/**
- * Calculate the next occurrence date based on recurrence pattern
- */
-const getNextOccurrenceDate = (currentDate: Date, recurrence: RecurrencePattern): Date => {
-  const next = new Date(currentDate)
-  const interval = recurrence.interval || 1
-
-  switch (recurrence.frequency) {
-    case 'daily':
-      next.setDate(next.getDate() + interval)
-      break
-    
-    case 'weekly':
-      if (recurrence.daysOfWeek && recurrence.daysOfWeek.length > 0) {
-        // Find next day in the daysOfWeek array
-        let found = false
-        for (let i = 1; i <= 7; i++) {
-          const checkDate = new Date(next)
-          checkDate.setDate(checkDate.getDate() + i)
-          if (recurrence.daysOfWeek.includes(checkDate.getDay())) {
-            // Check if we've completed a week cycle
-            const weeksPassed = Math.floor(i / 7)
-            if (weeksPassed === 0 || (weeksPassed >= interval - 1)) {
-              next.setDate(next.getDate() + i)
-              found = true
-              break
-            }
-          }
-        }
-        if (!found) {
-          next.setDate(next.getDate() + (7 * interval))
-        }
-      } else {
-        next.setDate(next.getDate() + (7 * interval))
-      }
-      break
-    
-    case 'monthly':
-      next.setMonth(next.getMonth() + interval)
-      // Handle edge cases like Jan 31 -> Feb 28
-      if (recurrence.dayOfMonth) {
-        const targetDay = recurrence.dayOfMonth
-        const daysInMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()
-        next.setDate(Math.min(targetDay, daysInMonth))
-      }
-      break
-    
-    case 'yearly':
-      next.setFullYear(next.getFullYear() + interval)
-      break
-  }
-
-  return next
-}
 
 // Props with defaults
 const props = withDefaults(defineProps<SchedulerCalendarProps>(), {
@@ -331,7 +209,19 @@ const props = withDefaults(defineProps<SchedulerCalendarProps>(), {
   allowEventEditing: true,
   allowEventDeletion: true,
   firstDayOfWeek: 0,
-  textLabels: () => ({})
+  textLabels: () => ({}),
+  // New enhanced props defaults
+  enabledViews: () => ['yearly', 'monthly', 'weekly', 'daily', 'hourly'],
+  slotHeight: () => ({ hourly: 60, daily: 48, weekly: 48 }),
+  responsiveBreakpoints: () => ({ mobile: 480, tablet: 768, desktop: 1024 }),
+  headerOptions: () => ({ showNavigation: true, showToday: true, showViewSwitcher: true, showTitle: true }),
+  legendOptions: () => ({ show: true, position: 'bottom' }),
+  showCurrentTimeIndicator: true,
+  highlightToday: true,
+  highlightWeekends: false,
+  maxEventsPerSlot: 3,
+  eventMinHeight: 20,
+  compactMode: false
 })
 
 // Emits
@@ -340,6 +230,43 @@ const emit = defineEmits<SchedulerCalendarEmits>()
 // Reactive State
 const currentDate = ref(new Date(props.selectedDate!))
 const currentView = ref<SchedulerViewType>(props.view!)
+
+// Computed: Header options
+const showHeader = computed(() => {
+  const opts = props.headerOptions
+  return opts?.showNavigation || opts?.showToday || opts?.showViewSwitcher || opts?.showTitle
+})
+
+const showNavigation = computed(() => props.headerOptions?.showNavigation !== false)
+const showTodayButton = computed(() => props.headerOptions?.showToday !== false)
+const showViewSwitcher = computed(() => props.headerOptions?.showViewSwitcher !== false)
+const showTitle = computed(() => props.headerOptions?.showTitle !== false)
+
+// Computed: Legend options
+const showLegend = computed(() => {
+  if (props.legendOptions?.show === false) return false
+  return props.categories && props.categories.length > 0
+})
+
+const legendPosition = computed(() => props.legendOptions?.position || 'bottom')
+
+// Computed: Resolved slot heights with defaults
+const resolvedSlotHeight = computed(() => ({
+  hourly: props.slotHeight?.hourly ?? 60,
+  daily: props.slotHeight?.daily ?? 48,
+  weekly: props.slotHeight?.weekly ?? 48
+}))
+
+// Computed: CSS Variables for dynamic styling
+const cssVariables = computed(() => ({
+  '--breakpoint-mobile': `${props.responsiveBreakpoints?.mobile ?? 480}px`,
+  '--breakpoint-tablet': `${props.responsiveBreakpoints?.tablet ?? 768}px`,
+  '--breakpoint-desktop': `${props.responsiveBreakpoints?.desktop ?? 1024}px`,
+  '--slot-height-hourly': `${resolvedSlotHeight.value.hourly}px`,
+  '--slot-height-daily': `${resolvedSlotHeight.value.daily}px`,
+  '--slot-height-weekly': `${resolvedSlotHeight.value.weekly}px`,
+  '--event-min-height': `${props.eventMinHeight ?? 20}px`
+}))
 
 // Labels with defaults
 const labels = computed(() => ({
@@ -362,8 +289,8 @@ const labels = computed(() => ({
   save: props.textLabels?.save || 'Save'
 }))
 
-// View options
-const viewOptions = computed(() => [
+// All view options
+const allViewOptions = computed(() => [
   { value: 'yearly' as SchedulerViewType, label: labels.value.yearView },
   { value: 'monthly' as SchedulerViewType, label: labels.value.monthView },
   { value: 'weekly' as SchedulerViewType, label: labels.value.weekView },
@@ -371,21 +298,14 @@ const viewOptions = computed(() => [
   { value: 'hourly' as SchedulerViewType, label: labels.value.hourView }
 ])
 
+// Filtered view options based on enabledViews prop
+const filteredViewOptions = computed(() => {
+  const enabled = props.enabledViews || ['yearly', 'monthly', 'weekly', 'daily', 'hourly']
+  return allViewOptions.value.filter(opt => enabled.includes(opt.value))
+})
+
 // Computed: Current year
 const currentYear = computed(() => currentDate.value.getFullYear())
-
-// Computed: Expanded events (including recurring event instances)
-const expandedEvents = computed((): ResourceEvent[] => {
-  const range = getVisibleDateRange()
-  const rangeStart = new Date(range.start)
-  const rangeEnd = new Date(range.end)
-  
-  // Add buffer for events that might span into the visible range
-  rangeStart.setDate(rangeStart.getDate() - 7)
-  rangeEnd.setDate(rangeEnd.getDate() + 7)
-  
-  return expandRecurringEvents(props.events || [], rangeStart, rangeEnd)
-})
 
 // Computed: Current period title based on view
 const currentPeriodTitle = computed(() => {
@@ -394,41 +314,41 @@ const currentPeriodTitle = computed(() => {
   switch (currentView.value) {
     case 'yearly':
       return date.getFullYear().toString()
-    
+
     case 'monthly':
-      return new Intl.DateTimeFormat(props.locale, { 
-        year: 'numeric', 
-        month: 'long' 
+      return new Intl.DateTimeFormat(props.locale, {
+        year: 'numeric',
+        month: 'long'
       }).format(date)
-    
+
     case 'weekly': {
       const weekStart = getWeekStart(date)
       const weekEnd = new Date(weekStart)
       weekEnd.setDate(weekEnd.getDate() + 6)
-      
-      const startFormat = new Intl.DateTimeFormat(props.locale, { 
-        month: 'short', 
-        day: 'numeric' 
+
+      const startFormat = new Intl.DateTimeFormat(props.locale, {
+        month: 'short',
+        day: 'numeric'
       }).format(weekStart)
-      
-      const endFormat = new Intl.DateTimeFormat(props.locale, { 
-        month: 'short', 
+
+      const endFormat = new Intl.DateTimeFormat(props.locale, {
+        month: 'short',
         day: 'numeric',
         year: 'numeric'
       }).format(weekEnd)
-      
+
       return `${startFormat} - ${endFormat}`
     }
-    
+
     case 'daily':
     case 'hourly':
-      return new Intl.DateTimeFormat(props.locale, { 
+      return new Intl.DateTimeFormat(props.locale, {
         weekday: 'long',
-        year: 'numeric', 
+        year: 'numeric',
         month: 'long',
         day: 'numeric'
       }).format(date)
-    
+
     default:
       return new Intl.DateTimeFormat(props.locale, {
         year: 'numeric',
@@ -459,7 +379,7 @@ const toDateString = (date: Date): string => {
 // Navigation methods
 const navigatePrevious = () => {
   const newDate = new Date(currentDate.value)
-  
+
   switch (currentView.value) {
     case 'yearly':
       newDate.setFullYear(newDate.getFullYear() - 1)
@@ -475,7 +395,7 @@ const navigatePrevious = () => {
       newDate.setDate(newDate.getDate() - 1)
       break
   }
-  
+
   currentDate.value = newDate
   emit('update:selectedDate', newDate)
   emitDateRangeChange()
@@ -483,7 +403,7 @@ const navigatePrevious = () => {
 
 const navigateNext = () => {
   const newDate = new Date(currentDate.value)
-  
+
   switch (currentView.value) {
     case 'yearly':
       newDate.setFullYear(newDate.getFullYear() + 1)
@@ -499,7 +419,7 @@ const navigateNext = () => {
       newDate.setDate(newDate.getDate() + 1)
       break
   }
-  
+
   currentDate.value = newDate
   emit('update:selectedDate', newDate)
   emitDateRangeChange()
@@ -512,6 +432,10 @@ const goToToday = () => {
 }
 
 const switchView = (view: SchedulerViewType) => {
+  // Only switch to enabled views
+  const enabled = props.enabledViews || ['yearly', 'monthly', 'weekly', 'daily', 'hourly']
+  if (!enabled.includes(view)) return
+
   currentView.value = view
   emit('update:view', view)
   emit('view-change', view)
@@ -565,7 +489,12 @@ const handleMonthClick = (month: number) => {
   const newDate = new Date(currentDate.value)
   newDate.setMonth(month)
   currentDate.value = newDate
-  switchView('monthly')
+
+  // Switch to monthly if enabled, otherwise stay in current view
+  const enabled = props.enabledViews || ['yearly', 'monthly', 'weekly', 'daily', 'hourly']
+  if (enabled.includes('monthly')) {
+    switchView('monthly')
+  }
 }
 
 const handleDateClick = (dateString: string) => {
@@ -601,10 +530,27 @@ watch(() => props.view, (newView) => {
     currentView.value = newView
   }
 })
+
+// Ensure current view is valid when enabledViews changes
+watch(() => props.enabledViews, (enabledViews) => {
+  if (enabledViews && enabledViews.length > 0 && !enabledViews.includes(currentView.value)) {
+    currentView.value = enabledViews[0]
+    emit('update:view', currentView.value)
+    emit('view-change', currentView.value)
+  }
+}, { immediate: true })
 </script>
 
 <style scoped>
 .resource-scheduler-calendar {
+  --breakpoint-mobile: 480px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1024px;
+  --slot-height-hourly: 60px;
+  --slot-height-daily: 48px;
+  --slot-height-weekly: 48px;
+  --event-min-height: 20px;
+
   width: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   border-radius: 12px;
@@ -618,6 +564,55 @@ watch(() => props.view, (newView) => {
   background: #1e293b;
   color: #f1f5f9;
   border-color: #334155;
+}
+
+/* Compact Mode */
+.compact-mode {
+  font-size: 0.875rem;
+}
+
+.compact-mode .scheduler-header {
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.compact-mode .nav-btn {
+  width: 28px;
+  height: 28px;
+}
+
+.compact-mode .today-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.compact-mode .period-title {
+  font-size: 16px;
+  min-width: 150px;
+}
+
+.compact-mode .view-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.compact-mode .scheduler-content {
+  padding: 12px;
+  min-height: 300px;
+}
+
+.compact-mode .scheduler-legend {
+  padding: 8px 12px;
+  gap: 10px;
+}
+
+.compact-mode .legend-item {
+  font-size: 11px;
+}
+
+.compact-mode .legend-color {
+  width: 12px;
+  height: 12px;
 }
 
 /* Header */
@@ -663,6 +658,11 @@ watch(() => props.view, (newView) => {
   border-color: #cbd5e1;
 }
 
+.nav-btn:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
 .theme-dark .nav-btn {
   background: #334155;
   border-color: #475569;
@@ -695,6 +695,11 @@ watch(() => props.view, (newView) => {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.today-btn:focus {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
 }
 
 /* Period Title */
@@ -744,6 +749,11 @@ watch(() => props.view, (newView) => {
   background: #f1f5f9;
 }
 
+.view-btn:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
 .view-btn.active {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
@@ -781,11 +791,25 @@ watch(() => props.view, (newView) => {
   gap: 16px;
   padding: 16px 20px;
   background: #f8fafc;
+}
+
+.scheduler-legend.legend-top {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.scheduler-legend.legend-bottom {
   border-top: 1px solid #e2e8f0;
 }
 
 .theme-dark .scheduler-legend {
   background: #0f172a;
+}
+
+.theme-dark .scheduler-legend.legend-top {
+  border-color: #334155;
+}
+
+.theme-dark .scheduler-legend.legend-bottom {
   border-color: #334155;
 }
 
@@ -809,20 +833,43 @@ watch(() => props.view, (newView) => {
 }
 
 /* Responsive - Tablet */
-@media (max-width: 992px) {
+@media (max-width: 768px) {
   .scheduler-header {
-    padding: 14px 16px;
+    flex-direction: column;
     gap: 12px;
   }
 
   .period-title {
-    font-size: 18px;
-    min-width: 180px;
+    order: -1;
+    width: 100%;
+  }
+
+  .nav-controls,
+  .view-switcher {
+    width: 100%;
+    justify-content: center;
   }
 
   .view-btn {
-    padding: 7px 10px;
+    flex: 1;
+    padding: 8px 8px;
     font-size: 12px;
+  }
+
+  .scheduler-content {
+    padding: 12px;
+  }
+}
+
+/* Responsive - Mobile */
+@media (max-width: 480px) {
+  .resource-scheduler-calendar {
+    border-radius: 8px;
+  }
+
+  .scheduler-header {
+    padding: 12px;
+    gap: 10px;
   }
 
   .nav-btn {
@@ -830,17 +877,32 @@ watch(() => props.view, (newView) => {
     height: 32px;
   }
 
+  .nav-arrow {
+    font-size: 18px;
+  }
+
   .today-btn {
-    padding: 7px 14px;
+    padding: 6px 12px;
     font-size: 13px;
   }
 
+  .period-title {
+    font-size: 16px;
+    min-width: auto;
+  }
+
+  .view-btn {
+    padding: 6px 6px;
+    font-size: 11px;
+  }
+
   .scheduler-content {
-    padding: 16px;
+    padding: 8px;
+    min-height: 300px;
   }
 
   .scheduler-legend {
-    padding: 12px 16px;
+    padding: 12px;
     gap: 12px;
   }
 
@@ -851,128 +913,6 @@ watch(() => props.view, (newView) => {
   .legend-color {
     width: 14px;
     height: 14px;
-  }
-}
-
-/* Responsive - Mobile */
-@media (max-width: 768px) {
-  .scheduler-header {
-    flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-  }
-
-  .period-title {
-    order: -1;
-    width: 100%;
-    font-size: 16px;
-    min-width: unset;
-  }
-
-  .nav-controls {
-    width: 100%;
-    justify-content: center;
-    gap: 6px;
-  }
-
-  .nav-btn {
-    width: 36px;
-    height: 36px;
-  }
-
-  .nav-arrow {
-    font-size: 18px;
-  }
-
-  .today-btn {
-    padding: 8px 16px;
-    font-size: 13px;
-  }
-
-  .view-switcher {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .view-btn {
-    flex: 1;
-    padding: 8px 6px;
-    font-size: 11px;
-  }
-
-  .scheduler-content {
-    padding: 12px;
-    min-height: 300px;
-  }
-
-  .scheduler-legend {
-    padding: 10px 12px;
-    gap: 10px;
-  }
-
-  .legend-item {
-    font-size: 11px;
-    gap: 6px;
-  }
-
-  .legend-color {
-    width: 12px;
-    height: 12px;
-  }
-}
-
-/* Responsive - Very small screens */
-@media (max-width: 480px) {
-  .scheduler-container {
-    border-radius: 8px;
-  }
-
-  .scheduler-header {
-    padding: 10px;
-    gap: 8px;
-  }
-
-  .period-title {
-    font-size: 14px;
-  }
-
-  .nav-btn {
-    width: 32px;
-    height: 32px;
-  }
-
-  .nav-arrow {
-    font-size: 16px;
-  }
-
-  .today-btn {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-
-  .view-btn {
-    padding: 6px 4px;
-    font-size: 10px;
-  }
-
-  .scheduler-content {
-    padding: 8px;
-    min-height: 250px;
-  }
-
-  .scheduler-legend {
-    padding: 8px 10px;
-    gap: 8px;
-  }
-
-  .legend-item {
-    font-size: 10px;
-    gap: 4px;
-  }
-
-  .legend-color {
-    width: 10px;
-    height: 10px;
   }
 }
 </style>

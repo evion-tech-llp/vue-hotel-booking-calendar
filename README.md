@@ -50,7 +50,20 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 📅 **Flexible Navigation** - Optional previous month navigation for historical data  
 🔧 **Highly Customizable** - Extensive props and styling options
 
-## 🆕 What's New in v1.1.0
+## 🆕 What's New in v1.2.0
+
+- ✅ **Enhanced ResourceSchedulerCalendar** - New configurable props for complete customization
+- ✅ **Enabled Views Control** - Choose which views to display (`enabledViews` prop)
+- ✅ **Configurable Slot Heights** - Customize slot heights for different views
+- ✅ **Responsive Breakpoints** - Set custom breakpoints for responsive behavior
+- ✅ **Header Options** - Toggle navigation, today button, view switcher, and title
+- ✅ **Legend Options** - Control legend visibility and position (top/bottom)
+- ✅ **Compact Mode** - Condensed UI perfect for sidebars or small screens
+- ✅ **Week Numbers** - Display ISO week numbers in monthly view
+- ✅ **Weekend Highlighting** - Optional visual highlighting for weekend days
+- ✅ **Current Time Indicator** - Toggle current time line in time-based views
+
+## What's New in v1.1.0
 
 - ✅ **New ResourceSchedulerCalendar Component** - Complete resource scheduling solution
 - ✅ **5 Calendar Views** - Yearly, Monthly, Weekly, Daily, and Hourly views
@@ -340,10 +353,36 @@ const handleSlotClick = (slot: { start: string; end: string; date: string }) => 
     :working-hours="workingHours"
     :time-interval="30"
     :show-all-day-slot="true"
+    :first-day-of-week="1"
     theme="light"
     locale="en-US"
+    :enabled-views="['monthly', 'weekly', 'daily']"
+    :slot-height="{ hourly: 60, daily: 48, weekly: 48 }"
+    :header-options="{ showNavigation: true, showToday: true, showViewSwitcher: true, showTitle: true }"
+    :legend-options="{ show: true, position: 'bottom' }"
+    :highlight-today="true"
+    :highlight-weekends="true"
+    :show-current-time-indicator="true"
+    :max-events-per-slot="3"
+    :show-week-numbers="true"
     @event-click="handleEventClick"
     @slot-click="handleSlotClick"
+  />
+</template>
+```
+
+### New v1.2.0 Configuration Options
+
+```vue
+<template>
+  <!-- Compact mode for sidebars -->
+  <ResourceSchedulerCalendar
+    :events="events"
+    :categories="categories"
+    :enabled-views="['monthly', 'weekly']"
+    :compact-mode="true"
+    :legend-options="{ show: false }"
+    :header-options="{ showViewSwitcher: true, showNavigation: true }"
   />
 </template>
 ```

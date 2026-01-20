@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-01-20
+
+### Added
+- **Enhanced ResourceSchedulerCalendar** with new configurable props:
+  - `enabledViews` - Control which view buttons are displayed (yearly/monthly/weekly/daily/hourly)
+  - `slotHeight` - Configurable slot heights for hourly, daily, and weekly views
+  - `responsiveBreakpoints` - Customizable breakpoints for mobile/tablet/desktop
+  - `headerOptions` - Toggle visibility of navigation, today button, view switcher, and title
+  - `legendOptions` - Control legend visibility and position (top/bottom)
+  - `showCurrentTimeIndicator` - Toggle current time line in time-based views
+  - `highlightToday` - Toggle today's date highlighting
+  - `highlightWeekends` - Optional weekend highlighting
+  - `maxEventsPerSlot` - Configurable max events shown before "+X more" in monthly view
+  - `eventMinHeight` - Minimum height for event elements
+  - `compactMode` - Condensed UI mode for smaller screens
+  - `showWeekNumbers` - Display ISO week numbers in monthly view
+
+### Improved
+- Better responsive design with configurable breakpoints
+- CSS variables for dynamic theming
+- First day of week support in yearly view
+- Enhanced accessibility with focus states on all interactive elements
+- Updated all sub-components (YearlyView, MonthlyView, WeeklyView, DailyView, HourlyView) to use new props
+
+### Fixed
+- All props are now properly passed through to sub-components
+- Consistent styling across all view components
+
 ## [1.1.0] - 2026-01-01
 
 ### Added
