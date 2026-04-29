@@ -354,11 +354,8 @@ const bookingSpans = computed(() => {
                     endDay = monthEnd.getDate()
                 }
 
-                // Ensure endDay is not less than startDay
-                endDay = Math.max(startDay, endDay)
-
-                // Only create span if we have valid days
-                if (startDay >= 1 && endDay <= monthEnd.getDate() && startDay <= endDay) {
+                // Only create span if we have valid days (endDay < 1 means checkout is the 1st of this month — no nights here)
+                if (startDay >= 1 && endDay >= 1 && endDay <= monthEnd.getDate() && startDay <= endDay) {
                     const statusConfig = getStatusConfig(booking.status)
 
                     spans[room.id].push({
@@ -577,8 +574,10 @@ const getGuestInitials = (room: Room, dateString: string): string => {
 const calculateNights = (checkIn: string, checkOut: string): number => {
     const checkInDate = new Date(checkIn)
     const checkOutDate = new Date(checkOut)
+    checkInDate.setHours(0, 0, 0, 0)
+    checkOutDate.setHours(0, 0, 0, 0)
     const diffTime = checkOutDate.getTime() - checkInDate.getTime()
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return Math.round(diffTime / (1000 * 60 * 60 * 24))
 }
 
 const getCellTooltip = (room: Room, dateString: string): string => {
