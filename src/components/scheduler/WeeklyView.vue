@@ -20,19 +20,26 @@
     <div v-if="showAllDaySlot" class="all-day-row">
       <div class="time-label all-day-label">All Day</div>
       <div
-        v-for="day in weekDays"
+        v-for="(day, dayIndex) in weekDays"
         :key="`allday-${day.dateString}`"
         class="all-day-cell"
         :class="{ 'is-today': highlightToday && day.isToday }"
+        :ref="el => allDayCellNav.setCellRef(el, dayIndex)"
+        :tabindex="allDayCellNav.isTabbable(dayIndex) ? 0 : -1"
+        role="button"
+        :aria-label="`${day.date.toDateString()} all day`"
         @click="handleAllDayClick(day)"
+        @keydown="allDayCellNav.handleKeydown($event, dayIndex)"
       >
         <div
           v-for="event in getAllDayEventsForDay(day.dateString)"
           :key="event.id"
           class="all-day-event"
+          :class="{ 'has-conflict': isConflicting(event) }"
           :style="getEventStyle(event)"
           @click.stop="handleEventClick(event)"
         >
+          <span v-if="isConflicting(event)" class="conflict-icon" title="Conflicts with another event" aria-label="Conflicts with another event">&#9888;</span>
           {{ event.title }}
         </div>
       </div>
@@ -47,7 +54,7 @@
               {{ formatHour(hour) }}
             </div>
             <div
-              v-for="day in weekDays"
+              v-for="(day, dayIndex) in weekDays"
               :key="`${day.dateString}-${hour}`"
               class="time-slot"
               :class="{
@@ -55,16 +62,30 @@
                 'is-today': highlightToday && day.isToday,
                 'is-weekend': highlightWeekends && day.isWeekend
               }"
+              :ref="el => timeSlotNav.setCellRef(el, hour * 7 + dayIndex)"
+              :tabindex="timeSlotNav.isTabbable(hour * 7 + dayIndex) ? 0 : -1"
+              role="button"
+              :aria-label="`${day.date.toDateString()} ${formatHour(hour)}${getEventsForSlot(day.dateString, hour).length > 0 ? ', has events' : ''}`"
               @click="handleSlotClick(day, hour)"
+              @keydown="timeSlotNav.handleKeydown($event, hour * 7 + dayIndex)"
             >
+              <!-- Current Time Indicator -->
+              <div v-if="showCurrentTimeIndicator && isCurrentHour(day, hour)" class="current-time-indicator" :style="{ top: `${currentMinuteOffset}%` }">
+                <div class="time-dot"></div>
+              </div>
+
               <div
                 v-for="event in getEventsForSlot(day.dateString, hour)"
                 :key="event.id"
                 class="slot-event"
+                :class="{ 'has-conflict': isConflicting(event) }"
                 :style="getPositionedEventStyle(event)"
                 @click.stop="handleEventClick(event)"
               >
-                <div class="event-title">{{ event.title }}</div>
+                <div class="event-title">
+                  <span v-if="isConflicting(event)" class="conflict-icon" title="Conflicts with another event" aria-label="Conflicts with another event">&#9888;</span>
+                  {{ event.title }}
+                </div>
                 <div class="event-time">{{ formatEventTimeRange(event) }}</div>
               </div>
             </div>
@@ -72,12 +93,17 @@
         </template>
       </div>
     </div>
+
+    <!-- Empty State -->
+    <div v-if="!hasAnyEvents" class="no-events-message">{{ noEventsLabel }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ResourceEvent, EventCategory, WorkingHours, TimeInterval } from '../../types'
+import { parseLocalDate } from '../../utils/date'
+import { useGridKeyboardNav } from '../../composables/useGridKeyboardNav'
 
 interface WeekDay {
   date: Date
@@ -102,6 +128,8 @@ interface Props {
   showCurrentTimeIndicator?: boolean
   slotHeight?: number
   eventMinHeight?: number
+  conflictingEventIds?: string[]
+  noEventsLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -109,7 +137,9 @@ const props = withDefaults(defineProps<Props>(), {
   highlightWeekends: false,
   showCurrentTimeIndicator: true,
   slotHeight: 48,
-  eventMinHeight: 20
+  eventMinHeight: 20,
+  conflictingEventIds: () => [],
+  noEventsLabel: 'No events'
 })
 
 const emit = defineEmits<{
@@ -191,18 +221,30 @@ const formatHour = (hour: number): string => {
 const getAllDayEventsForDay = (dateString: string): ResourceEvent[] => {
   return props.events.filter(event => {
     if (!event.allDay) return false
-    
-    const eventStart = new Date(event.start)
-    const eventEnd = new Date(event.end)
-    const checkDate = new Date(dateString)
-    
+
+    const eventStart = parseLocalDate(event.start)
+    const eventEnd = parseLocalDate(event.end)
+    const checkDate = parseLocalDate(dateString)
+
     eventStart.setHours(0, 0, 0, 0)
     eventEnd.setHours(23, 59, 59, 999)
     checkDate.setHours(12, 0, 0, 0)
-    
+
     return checkDate >= eventStart && checkDate <= eventEnd
   })
 }
+
+const isConflicting = (event: ResourceEvent): boolean => {
+  return props.conflictingEventIds.includes(event.id)
+}
+
+// Whether any event is visible anywhere in the displayed week (drives the empty-state message)
+const hasAnyEvents = computed(() => {
+  return weekDays.value.some(day =>
+    getAllDayEventsForDay(day.dateString).length > 0 ||
+    hoursOfDay.value.some(hour => getEventsForSlot(day.dateString, hour).length > 0)
+  )
+})
 
 const getEventsForSlot = (dateString: string, hour: number): ResourceEvent[] => {
   return props.events.filter(event => {
@@ -274,8 +316,16 @@ const formatEventTimeRange = (event: ResourceEvent): string => {
 const handleSlotClick = (day: WeekDay, hour: number) => {
   const start = `${day.dateString}T${String(hour).padStart(2, '0')}:00:00`
   const endHour = hour + 1
-  const end = `${day.dateString}T${String(endHour).padStart(2, '0')}:00:00`
-  
+
+  let end: string
+  if (endHour === 24) {
+    const nextDay = new Date(day.date)
+    nextDay.setDate(nextDay.getDate() + 1)
+    end = `${toDateString(nextDay)}T00:00:00`
+  } else {
+    end = `${day.dateString}T${String(endHour).padStart(2, '0')}:00:00`
+  }
+
   emit('slot-click', { start, end, date: day.dateString, hour })
 }
 
@@ -291,6 +341,44 @@ const handleAllDayClick = (day: WeekDay) => {
 const handleEventClick = (event: ResourceEvent) => {
   emit('event-click', event)
 }
+
+// Current-time indicator: only meaningful on today's column, within the current hour row
+const isCurrentHour = (day: WeekDay, hour: number): boolean => {
+  if (!day.isToday) return false
+  const now = new Date()
+  return now.getHours() === hour
+}
+
+const currentMinuteOffset = computed(() => {
+  const now = new Date()
+  return (now.getMinutes() / 60) * 100
+})
+
+// Keyboard navigation: all-day row (one row of 7 day cells)
+const allDayCellNav = useGridKeyboardNav(
+  () => weekDays.value.length,
+  {
+    columns: 7,
+    onActivate: (index) => {
+      const day = weekDays.value[index]
+      if (day) handleAllDayClick(day)
+    }
+  }
+)
+
+// Keyboard navigation: time-slot grid, flattened as hour * 7 + dayIndex (7 columns)
+const timeSlotNav = useGridKeyboardNav(
+  () => hoursOfDay.value.length * weekDays.value.length,
+  {
+    columns: 7,
+    onActivate: (index) => {
+      const dayIndex = index % 7
+      const hour = Math.floor(index / 7)
+      const day = weekDays.value[dayIndex]
+      if (day) handleSlotClick(day, hour)
+    }
+  }
+)
 </script>
 
 <style scoped>
@@ -461,7 +549,7 @@ const handleEventClick = (event: ResourceEvent) => {
 .time-row {
   display: grid;
   grid-template-columns: 70px repeat(7, 1fr);
-  min-height: 50px;
+  min-height: var(--slot-height, 48px);
   border-bottom: 1px solid #f1f5f9;
 }
 
@@ -512,6 +600,32 @@ const handleEventClick = (event: ResourceEvent) => {
 
 .time-slot:hover {
   background: #f8fafc;
+}
+
+.time-slot:focus-visible,
+.all-day-cell:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
+}
+
+/* Current Time Indicator */
+.current-time-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ef4444;
+  z-index: 20;
+}
+
+.time-dot {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border-radius: 50%;
 }
 
 .theme-dark .time-slot {
@@ -577,6 +691,30 @@ const handleEventClick = (event: ResourceEvent) => {
   font-size: 10px;
   opacity: 0.8;
   margin-top: 2px;
+}
+
+.slot-event.has-conflict,
+.all-day-event.has-conflict {
+  border: 1px dashed #d97706;
+}
+
+.conflict-icon {
+  font-size: 9px;
+  margin-right: 2px;
+}
+
+.no-events-message {
+  text-align: center;
+  padding: 20px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-style: italic;
+  border-top: 1px solid #e2e8f0;
+}
+
+.theme-dark .no-events-message {
+  color: #64748b;
+  border-color: #334155;
 }
 
 /* Responsive - Tablet */

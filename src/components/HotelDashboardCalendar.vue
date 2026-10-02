@@ -2,7 +2,8 @@
     <div class="hotel-dashboard-calendar" :class="`theme-${theme}`" :style="{ '--days-in-month': monthDates.length }">
         <!-- Header with Month Navigation -->
         <div class="dashboard-header">
-            <button @click="navigateMonth(-1)" class="nav-btn" :aria-label="labels.previousMonth">
+            <button @click="navigateMonth(-1)" class="nav-btn" :disabled="isPreviousMonthDisabled"
+                :aria-label="labels.previousMonth" :aria-disabled="isPreviousMonthDisabled">
                 <span class="nav-text">{{ labels.previousMonth }}</span>
                 <span class="nav-arrow">←</span>
             </button>
@@ -37,21 +38,36 @@
                     <template v-for="(dateCell, cellIndex) in getGridCellsForRoom(room)"
                         :key="`${room.id}-${cellIndex}`">
                         <div v-if="dateCell.type === 'booking-span'" class="booking-span-cell"
-                            :class="getCellClasses(room, dateCell.startDate)" :style="getBookingSpanStyle(dateCell)"
-                            @click="handleSpanClick(dateCell.booking)" :title="getSpanTooltip(dateCell)">
+                            :class="[getCellClasses(room, dateCell.startDate), { 'has-conflict': dateCell.conflictsWith }]"
+                            :style="getBookingSpanStyle(dateCell)"
+                            role="button"
+                            :tabindex="getDesktopGridNav(room).isTabbable(cellIndex) ? 0 : -1"
+                            :ref="(el: any) => getDesktopGridNav(room).setCellRef(el, cellIndex)"
+                            :aria-label="getSpanTooltip(dateCell)"
+                            @click="handleSpanClick(dateCell.booking)"
+                            @keydown="getDesktopGridNav(room).handleKeydown($event, cellIndex)"
+                            :title="getSpanTooltip(dateCell)">
                             <div class="span-content">
                                 <span class="span-text">{{ getSpanText(dateCell) }}</span>
+                                <span v-if="dateCell.conflictsWith" class="conflict-badge" aria-hidden="true"
+                                    title="Overlapping booking for this room">⚠</span>
                             </div>
                         </div>
                         <div v-else class="date-cell" :class="getCellClasses(room, dateCell.dateString)"
                             :style="getCellStyle(room, dateCell.dateString)"
+                            role="button"
+                            :tabindex="getDesktopGridNav(room).isTabbable(cellIndex) ? 0 : -1"
+                            :ref="(el: any) => getDesktopGridNav(room).setCellRef(el, cellIndex)"
+                            :aria-label="getCellTooltip(room, dateCell.dateString)"
                             @click="handleCellClick(room, dateCell.dateString)"
+                            @keydown="getDesktopGridNav(room).handleKeydown($event, cellIndex)"
                             :title="getCellTooltip(room, dateCell.dateString)">
                             <!-- Single day booking indicator (when not part of a span) -->
                             <div v-if="hasBooking(room, dateCell.dateString)" class="booking-indicator">
                                 <span class="guest-initials">
                                     {{ getGuestInitials(room, dateCell.dateString) }}
                                 </span>
+                                <span class="status-symbol" aria-hidden="true">{{ getStatusSymbol(getCellStatus(room, dateCell.dateString)) }}</span>
                             </div>
                         </div>
                     </template>
@@ -63,19 +79,23 @@
         <div class="calendar-container mobile-view">
             <!-- Mobile View Toggle -->
             <div class="mobile-view-toggle">
-                <button 
-                    @click="switchToVerticalView" 
+                <button
+                    @click="switchToVerticalView"
                     :class="{ active: !isHorizontalMobileView }"
-                    class="toggle-btn">
-                    <span class="toggle-icon">⊞</span>
-                    <span class="toggle-text">Vertical</span>
+                    class="toggle-btn"
+                    type="button"
+                    :aria-pressed="!isHorizontalMobileView">
+                    <span class="toggle-icon" aria-hidden="true">⊞</span>
+                    <span class="toggle-text">{{ labels.verticalView }}</span>
                 </button>
-                <button 
-                    @click="switchToHorizontalView" 
+                <button
+                    @click="switchToHorizontalView"
                     :class="{ active: isHorizontalMobileView }"
-                    class="toggle-btn">
-                    <span class="toggle-icon">⊟</span>
-                    <span class="toggle-text">Horizontal</span>
+                    class="toggle-btn"
+                    type="button"
+                    :aria-pressed="isHorizontalMobileView">
+                    <span class="toggle-icon" aria-hidden="true">⊟</span>
+                    <span class="toggle-text">{{ labels.horizontalView }}</span>
                 </button>
             </div>
 
@@ -97,23 +117,29 @@
                     <div class="mobile-days">
                         <!-- Empty cells for proper alignment -->
                         <template v-for="i in getFirstDayOffset" :key="`empty-${i}`">
-                            <div class="mobile-date-cell empty"></div>
+                            <div class="mobile-date-cell empty" aria-hidden="true"></div>
                         </template>
 
                         <!-- Actual date cells -->
-                        <template v-for="date in monthDates" :key="date.dateString">
-                            <div class="mobile-date-cell" 
+                        <template v-for="(date, dateIndex) in monthDates" :key="date.dateString">
+                            <div class="mobile-date-cell"
                                 :class="[
                                     getCellClasses(room, date.dateString),
                                     { 'other-month': date.date.getMonth() !== currentMonth.getMonth() }
-                                ]" 
+                                ]"
                                 :style="hasBooking(room, date.dateString) ? getCellStyle(room, date.dateString) : {}"
-                                @click="handleCellClick(room, date.dateString)">
+                                role="button"
+                                :tabindex="getMobileGridNav(room).isTabbable(dateIndex) ? 0 : -1"
+                                :ref="(el: any) => getMobileGridNav(room).setCellRef(el, dateIndex)"
+                                :aria-label="getCellTooltip(room, date.dateString)"
+                                @click="handleCellClick(room, date.dateString)"
+                                @keydown="getMobileGridNav(room).handleKeydown($event, dateIndex)">
                                 <div class="mobile-date-number">{{ date.day }}</div>
                                 <div v-if="hasBooking(room, date.dateString)" class="mobile-booking-indicator">
                                     <span class="mobile-guest-initials">
                                         {{ getGuestInitials(room, date.dateString) }}
                                     </span>
+                                    <span class="status-symbol" aria-hidden="true">{{ getStatusSymbol(getCellStatus(room, date.dateString)) }}</span>
                                 </div>
                             </div>
                         </template>
@@ -148,21 +174,36 @@
                             <template v-for="(dateCell, cellIndex) in getGridCellsForRoom(room)"
                                 :key="`${room.id}-${cellIndex}`">
                                 <div v-if="dateCell.type === 'booking-span'" class="horizontal-booking-span-cell"
-                                    :class="getCellClasses(room, dateCell.startDate)" :style="getBookingSpanStyle(dateCell)"
-                                    @click="handleSpanClick(dateCell.booking)" :title="getSpanTooltip(dateCell)">
+                                    :class="[getCellClasses(room, dateCell.startDate), { 'has-conflict': dateCell.conflictsWith }]"
+                                    :style="getBookingSpanStyle(dateCell)"
+                                    role="button"
+                                    :tabindex="getHorizontalGridNav(room).isTabbable(cellIndex) ? 0 : -1"
+                                    :ref="(el: any) => getHorizontalGridNav(room).setCellRef(el, cellIndex)"
+                                    :aria-label="getSpanTooltip(dateCell)"
+                                    @click="handleSpanClick(dateCell.booking)"
+                                    @keydown="getHorizontalGridNav(room).handleKeydown($event, cellIndex)"
+                                    :title="getSpanTooltip(dateCell)">
                                     <div class="horizontal-span-content">
                                         <span class="horizontal-span-text">{{ getSpanText(dateCell) }}</span>
+                                        <span v-if="dateCell.conflictsWith" class="conflict-badge" aria-hidden="true"
+                                            title="Overlapping booking for this room">⚠</span>
                                     </div>
                                 </div>
                                 <div v-else class="horizontal-date-cell" :class="getCellClasses(room, dateCell.dateString)"
                                     :style="getCellStyle(room, dateCell.dateString)"
+                                    role="button"
+                                    :tabindex="getHorizontalGridNav(room).isTabbable(cellIndex) ? 0 : -1"
+                                    :ref="(el: any) => getHorizontalGridNav(room).setCellRef(el, cellIndex)"
+                                    :aria-label="getCellTooltip(room, dateCell.dateString)"
                                     @click="handleCellClick(room, dateCell.dateString)"
+                                    @keydown="getHorizontalGridNav(room).handleKeydown($event, cellIndex)"
                                     :title="getCellTooltip(room, dateCell.dateString)">
                                     <!-- Single day booking indicator (when not part of a span) -->
                                     <div v-if="hasBooking(room, dateCell.dateString)" class="horizontal-booking-indicator">
                                         <span class="horizontal-guest-initials">
                                             {{ getGuestInitials(room, dateCell.dateString) }}
                                         </span>
+                                        <span class="status-symbol" aria-hidden="true">{{ getStatusSymbol(getCellStatus(room, dateCell.dateString)) }}</span>
                                     </div>
                                 </div>
                             </template>
@@ -194,6 +235,8 @@ import type {
     Booking,
     StatusConfig
 } from '../types'
+import { parseLocalDate } from '../utils/date'
+import { useGridKeyboardNav } from '../composables/useGridKeyboardNav'
 
 // Props
 const props = withDefaults(defineProps<DashboardCalendarProps>(), {
@@ -202,6 +245,15 @@ const props = withDefaults(defineProps<DashboardCalendarProps>(), {
     allowPreviousMonthNavigation: false,
     textLabels: () => ({})
 })
+
+// Dev-only logging: avoid leaking guest PII (names, raw booking dates) to the
+// browser console in production builds.
+const isDev = typeof import.meta !== 'undefined' && !!(import.meta as any).env?.DEV
+/* eslint-disable no-console */
+const devWarn = (...args: unknown[]) => { if (isDev) console.warn(...args) }
+const devError = (...args: unknown[]) => { if (isDev) console.error(...args) }
+const devDebugLog = (...args: unknown[]) => { if (isDev) console.debug(...args) }
+/* eslint-enable no-console */
 
 // Emits
 const emit = defineEmits<DashboardCalendarEmits>()
@@ -270,7 +322,9 @@ const labels = computed(() => ({
     room: props.textLabels?.room || 'Room',
     available: props.textLabels?.available || 'Available',
     createBooking: props.textLabels?.createBooking || 'Click to create booking',
-    clickForDetails: props.textLabels?.clickForDetails || 'Click for details'
+    clickForDetails: props.textLabels?.clickForDetails || 'Click for details',
+    verticalView: props.textLabels?.verticalView || 'Vertical',
+    horizontalView: props.textLabels?.horizontalView || 'Horizontal'
 }))
 
 // Mobile weekday headers starting with Sunday
@@ -313,64 +367,109 @@ const monthDates = computed(() => {
 const bookingSpans = computed(() => {
     const spans: Record<string, any[]> = {}
 
+    if (!Array.isArray(props.rooms)) {
+        devWarn('HotelDashboardCalendar: rooms prop is not an array', props.rooms)
+        return spans
+    }
+    if (!Array.isArray(props.bookings)) {
+        devWarn('HotelDashboardCalendar: bookings prop is not an array', props.bookings)
+        return spans
+    }
+
     props.rooms.forEach(room => {
+        if (!room || typeof room !== 'object' || !room.id) {
+            devWarn('HotelDashboardCalendar: Invalid room in bookingSpans', room)
+            return
+        }
+
         spans[room.id] = []
 
         // Get bookings for this room that overlap with current month
         const roomBookings = props.bookings.filter(booking =>
-            booking.roomNumber === room.number
+            booking && typeof booking === 'object' && booking.roomNumber === room.number
         )
 
         roomBookings.forEach(booking => {
-            const checkIn = new Date(booking.checkIn)
-            const checkOut = new Date(booking.checkOut)
-            const currentYear = currentMonth.value.getFullYear()
-            const currentMonthIndex = currentMonth.value.getMonth()
-
-            // Calculate month boundaries correctly (avoid timezone issues)
-            const monthStart = new Date(currentYear, currentMonthIndex, 1)
-            const monthEnd = new Date(currentYear, currentMonthIndex + 1, 0) // Last day of current month
-
-            // Check if booking overlaps with current month
-            if (checkIn <= monthEnd && checkOut > monthStart) {
-                // Calculate start and end days within the current month
-                let startDay: number
-                let endDay: number
-
-                // Fix: Use the actual day of the month, not relative to month start
-                if (checkIn >= monthStart) {
-                    // Booking starts in this month
-                    startDay = checkIn.getDate()
-                } else {
-                    // Booking started in previous month
-                    startDay = 1
+            try {
+                if (!booking.checkIn || !booking.checkOut) {
+                    devWarn('HotelDashboardCalendar: Missing required booking properties in bookingSpans', booking)
+                    return
                 }
 
-                if (checkOut <= monthEnd) {
-                    // Booking ends in this month (subtract 1 because checkout is exclusive)
-                    endDay = checkOut.getDate() - 1
-                } else {
-                    // Booking continues into next month
-                    endDay = monthEnd.getDate()
+                // Parse date-only strings by their Y/M/D components directly
+                // (not `new Date(str)`, which parses as UTC midnight and is
+                // off-by-one against the locally-constructed monthStart/monthEnd
+                // below in any timezone offset from UTC).
+                const checkIn = parseLocalDate(booking.checkIn)
+                const checkOut = parseLocalDate(booking.checkOut)
+
+                if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime()) || checkOut <= checkIn) {
+                    devWarn('HotelDashboardCalendar: Invalid booking dates in bookingSpans', booking)
+                    return
                 }
 
-                // Only create span if we have valid days (endDay < 1 means checkout is the 1st of this month — no nights here)
-                if (startDay >= 1 && endDay >= 1 && endDay <= monthEnd.getDate() && startDay <= endDay) {
-                    const statusConfig = getStatusConfig(booking.status)
+                const currentYear = currentMonth.value.getFullYear()
+                const currentMonthIndex = currentMonth.value.getMonth()
 
-                    spans[room.id].push({
-                        booking,
-                        startDay,
-                        endDay,
-                        length: endDay - startDay + 1,
-                        statusConfig
-                    })
+                // Calculate month boundaries correctly (avoid timezone issues)
+                const monthStart = new Date(currentYear, currentMonthIndex, 1)
+                const monthEnd = new Date(currentYear, currentMonthIndex + 1, 0) // Last day of current month
+
+                // Check if booking overlaps with current month
+                if (checkIn <= monthEnd && checkOut > monthStart) {
+                    // Calculate start and end days within the current month
+                    let startDay: number
+                    let endDay: number
+
+                    // Fix: Use the actual day of the month, not relative to month start
+                    if (checkIn >= monthStart) {
+                        // Booking starts in this month
+                        startDay = checkIn.getDate()
+                    } else {
+                        // Booking started in previous month
+                        startDay = 1
+                    }
+
+                    if (checkOut <= monthEnd) {
+                        // Booking ends in this month (subtract 1 because checkout is exclusive)
+                        endDay = checkOut.getDate() - 1
+                    } else {
+                        // Booking continues into next month
+                        endDay = monthEnd.getDate()
+                    }
+
+                    // Only create span if we have valid days (endDay < 1 means checkout is the 1st of this month — no nights here)
+                    if (startDay >= 1 && endDay >= 1 && endDay <= monthEnd.getDate() && startDay <= endDay) {
+                        const statusConfig = getStatusConfig(booking.status)
+
+                        spans[room.id].push({
+                            booking,
+                            startDay,
+                            endDay,
+                            length: endDay - startDay + 1,
+                            statusConfig
+                        })
+                    }
                 }
+            } catch (err) {
+                devError('HotelDashboardCalendar: Error processing booking in bookingSpans', err, booking)
             }
         })
 
         // Sort spans by start day
         spans[room.id].sort((a, b) => a.startDay - b.startDay)
+
+        // Flag genuine overlaps (double-booked room) instead of silently
+        // dropping the overlapping span later in getGridCellsForRoom.
+        const roomSpans = spans[room.id]
+        roomSpans.forEach((span, i) => {
+            const conflicts = roomSpans.filter((other, j) =>
+                j !== i && span.startDay <= other.endDay && span.endDay >= other.startDay
+            )
+            if (conflicts.length > 0) {
+                span.conflictsWith = conflicts.map(c => c.booking)
+            }
+        })
     })
 
     return spans
@@ -384,16 +483,19 @@ const formatMonth = (date: Date): string => {
     }).format(date)
 }
 
+// Whether the "Previous month" nav button would currently no-op, so it can
+// be visually disabled instead of silently doing nothing on click.
+const isPreviousMonthDisabled = computed(() => {
+    if (props.allowPreviousMonthNavigation) return false
+    const today = new Date()
+    const currentMonthStart = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1)
+    const todayMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+    return currentMonthStart <= todayMonthStart
+})
+
 const navigateMonth = (direction: number): void => {
     // Allow navigation to previous months if allowPreviousMonthNavigation is true
-    if (direction < 0 && !props.allowPreviousMonthNavigation) {
-        const today = new Date()
-        const currentMonthStart = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth(), 1)
-        const todayMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-
-        // Don't allow going to months before current month unless explicitly allowed
-        if (currentMonthStart <= todayMonthStart) return
-    }
+    if (direction < 0 && isPreviousMonthDisabled.value) return
 
     const newMonth = new Date(currentMonth.value)
     newMonth.setMonth(newMonth.getMonth() + direction)
@@ -404,24 +506,24 @@ const navigateMonth = (direction: number): void => {
 const hasBooking = (room: Room, dateString: string): boolean => {
     try {
         if (!room || !dateString) {
-            console.warn('HotelDashboardCalendar: Invalid room or dateString in hasBooking', { room, dateString })
+            devWarn('HotelDashboardCalendar: Invalid room or dateString in hasBooking', { room, dateString })
             return false
         }
 
         if (!Array.isArray(props.bookings)) {
-            console.warn('HotelDashboardCalendar: bookings prop is not an array', props.bookings)
+            devWarn('HotelDashboardCalendar: bookings prop is not an array', props.bookings)
             return false
         }
 
         const matchingBooking = props.bookings.find(booking => {
             try {
                 if (!booking || typeof booking !== 'object') {
-                    console.warn('HotelDashboardCalendar: Invalid booking object', booking)
+                    devWarn('HotelDashboardCalendar: Invalid booking object', booking)
                     return false
                 }
 
                 if (!booking.roomNumber || !booking.checkIn || !booking.checkOut) {
-                    console.warn('HotelDashboardCalendar: Missing required booking properties', booking)
+                    devWarn('HotelDashboardCalendar: Missing required booking properties', booking)
                     return false
                 }
 
@@ -429,7 +531,7 @@ const hasBooking = (room: Room, dateString: string): boolean => {
                 
                 // Only log if there's a room number match but date doesn't match
                 if (booking.roomNumber === room.number && !isMatch) {
-                    console.debug(
+                    devDebugLog(
                         'HotelDashboardCalendar: Date range mismatch',
                         {
                             room: room.number,
@@ -449,13 +551,13 @@ const hasBooking = (room: Room, dateString: string): boolean => {
                 
                 return isMatch
             } catch (err) {
-                console.error('HotelDashboardCalendar: Error processing booking', err, booking)
+                devError('HotelDashboardCalendar: Error processing booking', err, booking)
                 return false
             }
         })
         return !!matchingBooking
     } catch (err) {
-        console.error('HotelDashboardCalendar: Error in hasBooking', err, { room, dateString })
+        devError('HotelDashboardCalendar: Error in hasBooking', err, { room, dateString })
         return false
     }
 }
@@ -464,7 +566,7 @@ const isDateInBookingRange = (dateString: string, booking: Booking): boolean => 
     try {
         // Validate inputs
         if (!dateString || !booking?.checkIn || !booking?.checkOut) {
-            console.warn('HotelDashboardCalendar: Invalid date or booking in isDateInBookingRange', { dateString, booking })
+            devWarn('HotelDashboardCalendar: Invalid date or booking in isDateInBookingRange', { dateString, booking })
             return false
         }
 
@@ -477,7 +579,7 @@ const isDateInBookingRange = (dateString: string, booking: Booking): boolean => 
 
             // Check for invalid dates
             if (isNaN(date.getTime()) || isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
-                console.warn('HotelDashboardCalendar: Invalid date format', {
+                devWarn('HotelDashboardCalendar: Invalid date format', {
                     date: dateString,
                     checkIn: booking.checkIn,
                     checkOut: booking.checkOut
@@ -485,7 +587,7 @@ const isDateInBookingRange = (dateString: string, booking: Booking): boolean => 
                 return false
             }
         } catch (err) {
-            console.error('HotelDashboardCalendar: Date parsing error', err, { dateString, booking })
+            devError('HotelDashboardCalendar: Date parsing error', err, { dateString, booking })
             return false
         }
 
@@ -498,7 +600,7 @@ const isDateInBookingRange = (dateString: string, booking: Booking): boolean => 
         const isSameDayBooking = checkIn.getTime() === checkOut.getTime()
         
         if (!isSameDayBooking && checkOut <= checkIn) {
-            console.warn('HotelDashboardCalendar: Invalid booking dates (checkOut <= checkIn)', {
+            devWarn('HotelDashboardCalendar: Invalid booking dates (checkOut <= checkIn)', {
                 checkIn: booking.checkIn,
                 checkOut: booking.checkOut
             })
@@ -513,7 +615,7 @@ const isDateInBookingRange = (dateString: string, booking: Booking): boolean => 
         // For normal bookings, check if date is within range (inclusive start, exclusive end)
         return date >= checkIn && date < checkOut
     } catch (err) {
-        console.error('HotelDashboardCalendar: Error in isDateInBookingRange', err, { dateString, booking })
+        devError('HotelDashboardCalendar: Error in isDateInBookingRange', err, { dateString, booking })
         return false
     }
 }
@@ -624,7 +726,11 @@ const getGridCellsForRoom = (room: Room): any[] => {
                 endDay: span.endDay,
                 length: span.length,
                 statusConfig: span.statusConfig,
-                startDate: dateString
+                startDate: dateString,
+                // Other bookings for this room that overlap this span's days
+                // (a genuine double-booking in the source data). Surfaced as a
+                // visible warning instead of being silently dropped.
+                conflictsWith: span.conflictsWith || null
             })
 
             // Mark all days in this span as processed
@@ -647,6 +753,60 @@ const getGridCellsForRoom = (room: Room): any[] => {
     return cells
 }
 
+// Activate (Enter/Space) a grid-span or date cell the same way a click would.
+const activateGridCell = (room: Room, index: number): void => {
+    const cell = getGridCellsForRoom(room)[index]
+    if (!cell) return
+    if (cell.type === 'booking-span') {
+        handleSpanClick(cell.booking)
+    } else {
+        handleCellClick(room, cell.dateString)
+    }
+}
+
+// Roving-tabindex keyboard navigation, one instance per room per grid (the
+// desktop grid and the horizontal-mobile grid render separate DOM trees for
+// the same data, so they need separate instances to avoid ref collisions;
+// the vertical-mobile grid is a true 7-column calendar per room).
+const desktopGridNavs = new Map<string, ReturnType<typeof useGridKeyboardNav>>()
+const getDesktopGridNav = (room: Room) => {
+    if (!desktopGridNavs.has(room.id)) {
+        desktopGridNavs.set(room.id, useGridKeyboardNav(
+            () => getGridCellsForRoom(room).length,
+            { columns: Math.max(getGridCellsForRoom(room).length, 1), onActivate: (index) => activateGridCell(room, index) }
+        ))
+    }
+    return desktopGridNavs.get(room.id)!
+}
+
+const horizontalGridNavs = new Map<string, ReturnType<typeof useGridKeyboardNav>>()
+const getHorizontalGridNav = (room: Room) => {
+    if (!horizontalGridNavs.has(room.id)) {
+        horizontalGridNavs.set(room.id, useGridKeyboardNav(
+            () => getGridCellsForRoom(room).length,
+            { columns: Math.max(getGridCellsForRoom(room).length, 1), onActivate: (index) => activateGridCell(room, index) }
+        ))
+    }
+    return horizontalGridNavs.get(room.id)!
+}
+
+const mobileGridNavs = new Map<string, ReturnType<typeof useGridKeyboardNav>>()
+const getMobileGridNav = (room: Room) => {
+    if (!mobileGridNavs.has(room.id)) {
+        mobileGridNavs.set(room.id, useGridKeyboardNav(
+            () => monthDates.value.length,
+            {
+                columns: 7,
+                onActivate: (index) => {
+                    const date = monthDates.value[index]
+                    if (date) handleCellClick(room, date.dateString)
+                }
+            }
+        ))
+    }
+    return mobileGridNavs.get(room.id)!
+}
+
 // NEW: Get grid span style for booking spans
 const getBookingSpanStyle = (dateCell: any): Record<string, string> => {
     const isDark = props.theme === 'dark'
@@ -657,12 +817,27 @@ const getBookingSpanStyle = (dateCell: any): Record<string, string> => {
     return {
         backgroundColor,
         color: dateCell.statusConfig.color,
-        border: `1px solid ${dateCell.statusConfig.color}`,
+        // A double-booked room gets a dashed warning border instead of the
+        // normal solid one, so the conflict isn't communicated by color alone.
+        border: dateCell.conflictsWith
+            ? `2px dashed #b45309`
+            : `1px solid ${dateCell.statusConfig.color}`,
         borderRadius: '4px',
         gridColumnStart: (dateCell.startDay + 1).toString(), // +1 for room column
         gridColumnEnd: (dateCell.endDay + 2).toString() // +2 for room column and exclusive end
     }
 }
+
+// Short, non-color-dependent glyph for a booking status, shown alongside
+// guest initials so status isn't conveyed by background color alone.
+const statusSymbols: Record<string, string> = {
+    confirmed: '✓',
+    pending: '…',
+    'checked-in': '→',
+    'checked-out': '←',
+    cancelled: '✕'
+}
+const getStatusSymbol = (statusKey: string): string => statusSymbols[statusKey] || ''
 
 const getSpanText = (span: any): string => {
     const nights = calculateNights(span.booking.checkIn, span.booking.checkOut)
@@ -687,7 +862,12 @@ const getSpanText = (span: any): string => {
 const getSpanTooltip = (span: any): string => {
     const nights = calculateNights(span.booking.checkIn, span.booking.checkOut)
     const room = props.rooms.find(r => r.number === span.booking.roomNumber)
-    return `${span.booking.guestName} - Room ${room?.number} - ${span.statusConfig.label} - ${nights} nights`
+    const base = `${span.booking.guestName} - Room ${room?.number} - ${span.statusConfig.label} - ${nights} nights`
+    if (span.conflictsWith?.length) {
+        const names = span.conflictsWith.map((b: Booking) => b.guestName).join(', ')
+        return `${base} — CONFLICT: overlaps with ${names}`
+    }
+    return base
 }
 
 const handleSpanClick = (booking: Booking): void => {
@@ -734,7 +914,7 @@ const scrollToToday = () => {
 // NEW: Get first day offset for grid alignment (Sunday = 0)
 const getFirstDayOffset = computed(() => {
     if (monthDates.value.length === 0) return 0
-    const firstDate = new Date(monthDates.value[0].dateString)
+    const firstDate = parseLocalDate(monthDates.value[0].dateString)
     const dayOfWeek = firstDate.getDay()
     // Sunday=0, Monday=1, etc. - no conversion needed
     return dayOfWeek
@@ -818,6 +998,21 @@ watch(isHorizontalMobileView, (newValue) => {
 .nav-btn:hover {
     background: #f8f9fa;
     border-color: #dee2e6;
+}
+
+.nav-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.nav-btn:disabled:hover {
+    background: white;
+    border-color: #e9ecef;
+}
+
+.theme-dark .nav-btn:disabled:hover {
+    background: #333;
+    border-color: #555;
 }
 
 .nav-text {
@@ -1072,6 +1267,36 @@ watch(isHorizontalMobileView, (newValue) => {
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.5px;
+}
+
+/* Non-color status glyph shown next to guest initials, so status isn't
+   conveyed by background color alone. */
+.status-symbol {
+    font-size: 9px;
+    margin-left: 2px;
+    opacity: 0.85;
+}
+
+/* Warning badge for a double-booked room (same days booked twice). */
+.conflict-badge {
+    margin-left: 4px;
+    font-size: 11px;
+    color: #b45309;
+}
+
+.booking-span-cell.has-conflict,
+.horizontal-booking-span-cell.has-conflict {
+    box-shadow: 0 0 0 1px #b45309 inset;
+}
+
+.date-cell:focus-visible,
+.booking-span-cell:focus-visible,
+.mobile-date-cell:focus-visible,
+.horizontal-date-cell:focus-visible,
+.horizontal-booking-span-cell:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: -2px;
+    z-index: 20;
 }
 
 /* Booking Span Cells (Grid-based) */

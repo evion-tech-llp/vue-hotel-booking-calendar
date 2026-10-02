@@ -23,7 +23,7 @@
     </div>
 
     <!-- NEW: Selection Error Display -->
-    <div v-if="selectionError && showSelectionErrors" class="selection-error">
+    <div v-if="selectionError && showSelectionErrors" class="selection-error" role="alert" aria-live="polite">
       <div class="error-icon">⚠️</div>
       <div class="error-content">
         <div class="error-message">{{ selectionError.message }}</div>
@@ -35,18 +35,19 @@
     </div>
 
     <div class="calendar-body">
-      <div class="calendar-grid-container">
+      <div class="calendar-grid-container" :class="{ 'is-loading': isLoading }" @mouseleave="clearHoverPreview">
         <div v-for="day in weekdays" :key="day" class="weekday">
           {{ day }}
         </div>
 
-        <div v-for="day in calendarDays" :key="day.dateString" class="day-cell" :class="{
+        <div v-for="(day, i) in calendarDays" :key="day.dateString" :ref="(el) => gridNav.setCellRef(el as HTMLElement | null, i)" class="day-cell" :class="{
           'other-month': !day.isCurrentMonth,
           'today': day.isToday,
           'selected': isDaySelected(day.dateString),
           'in-range': isDayInRange(day.dateString),
           'range-start': isRangeStart(day.dateString),
           'range-end': isRangeEnd(day.dateString),
+          'hover-preview': isDayInHoverPreview(day.dateString),
           'available': getEffectiveStatus(day) === 'available',
           'blocked': getEffectiveStatus(day) === 'blocked',
           'checkout-only': getEffectiveStatus(day) === 'checkout-only',
@@ -54,8 +55,10 @@
           'click-disabled': isClickDisabled(day),
           'error-blocked': isErrorBlocked(day.dateString)
         }" @click="handleDayClick(day)" @mouseenter="handleDayHover(day)" role="button"
-          :tabindex="isClickDisabled(day) ? -1 : 0" :aria-label="getDayAriaLabel(day)"
-          @keydown.enter="handleDayClick(day)" @keydown.space.prevent="handleDayClick(day)">
+          :tabindex="isClickDisabled(day) ? -1 : (gridNav.isTabbable(i) ? 0 : -1)"
+          :aria-label="getDayAriaLabel(day)" :aria-disabled="isClickDisabled(day)"
+          :aria-selected="isDaySelected(day.dateString)" :aria-current="day.isToday ? 'date' : undefined"
+          @keydown="gridNav.handleKeydown($event, i)">
           <div class="day-content">
             <span class="day-number">{{ day.date.getDate() }}</span>
             <div v-if="showPrices && getDayPrice(day)" class="day-price">
@@ -63,6 +66,12 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- NEW: Lightweight loading affordance while a host app fetches availabilityData asynchronously -->
+      <div v-if="isLoading" class="calendar-loading-overlay" role="status" aria-live="polite">
+        <span class="loading-spinner" aria-hidden="true"></span>
+        <span class="loading-text">Loading availability…</span>
       </div>
     </div>
 
@@ -132,9 +141,19 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
 import type { CalendarProps, CalendarEmits, CalendarDay, DateAvailability, AvailabilityStatus, SelectionError, PriceCalculation } from '../types'
+import { parseLocalDate } from '../utils/date'
+import { useGridKeyboardNav } from '../composables/useGridKeyboardNav'
+
+// Local prop extension: adds an optional loading affordance without modifying
+// the shared CalendarProps type (there is currently no isLoading/loading prop
+// upstream). Keeps the same optional-boolean style as the other flags below.
+interface HotelBookingCalendarProps extends CalendarProps {
+  /** Shows a lightweight loading indicator over the day grid, e.g. while a host app is fetching availabilityData asynchronously. */
+  isLoading?: boolean
+}
 
 // Props with defaults
-const props = withDefaults(defineProps<CalendarProps>(), {
+const props = withDefaults(defineProps<HotelBookingCalendarProps>(), {
   modelValue: () => ({ checkIn: null, checkOut: null }),
   availabilityData: () => ([]),
   locale: 'en-GB',
@@ -147,7 +166,8 @@ const props = withDefaults(defineProps<CalendarProps>(), {
   currency: 'GBP',
   showPriceCalculation: true,
   showSelectionErrors: true,
-  textLabels: () => ({})
+  textLabels: () => ({}),
+  isLoading: false
 })
 
 // Emits
@@ -169,12 +189,22 @@ const minDateObj = computed(() => {
     }
     return null
   }
-  return typeof props.minDate === 'string' ? new Date(props.minDate) : props.minDate
+  if (props.minDate instanceof Date) {
+    const normalized = new Date(props.minDate)
+    normalized.setHours(0, 0, 0, 0)
+    return normalized
+  }
+  return parseLocalDate(props.minDate)
 })
 
 const maxDateObj = computed(() => {
   if (!props.maxDate) return null
-  return typeof props.maxDate === 'string' ? new Date(props.maxDate) : props.maxDate
+  if (props.maxDate instanceof Date) {
+    const normalized = new Date(props.maxDate)
+    normalized.setHours(0, 0, 0, 0)
+    return normalized
+  }
+  return parseLocalDate(props.maxDate)
 })
 
 const availabilityMap = computed(() => {
@@ -281,23 +311,39 @@ const priceCalculation = computed((): PriceCalculation | null => {
 
   const startDate = new Date(checkIn)
   const endDate = new Date(checkOut)
-  const nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+  let nights = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+
+  // A same-day checkIn/checkOut selection is only possible when allowSingleDay
+  // is enabled; treat it as 1 billable night instead of 0 so pricing and the
+  // Book button remain usable end-to-end.
+  const isSingleDayStay = props.allowSingleDay && checkIn === checkOut
+  if (isSingleDayStay) {
+    nights = 1
+  }
 
   if (nights <= 0) return null
 
   const dailyPrices: { date: string; price: number }[] = []
   let totalPrice = 0
-  const current = new Date(startDate)
 
-  while (current < endDate) {
-    const dateString = toDateString(current)
+  if (isSingleDayStay) {
+    const dateString = toDateString(startDate)
     const availability = availabilityMap.value.get(dateString)
     const dayPrice = availability?.price || props.basePrice || 85
-
     dailyPrices.push({ date: dateString, price: dayPrice })
-    totalPrice += dayPrice
+    totalPrice = dayPrice
+  } else {
+    const current = new Date(startDate)
+    while (current < endDate) {
+      const dateString = toDateString(current)
+      const availability = availabilityMap.value.get(dateString)
+      const dayPrice = availability?.price || props.basePrice || 85
 
-    current.setDate(current.getDate() + 1)
+      dailyPrices.push({ date: dateString, price: dayPrice })
+      totalPrice += dayPrice
+
+      current.setDate(current.getDate() + 1)
+    }
   }
 
   return {
@@ -334,8 +380,8 @@ const formatPrice = (price: number): string => {
 }
 
 const formatDateRange = (checkIn: string, checkOut: string): string => {
-  const start = new Date(checkIn)
-  const end = new Date(checkOut)
+  const start = parseLocalDate(checkIn)
+  const end = parseLocalDate(checkOut)
 
   const formatter = new Intl.DateTimeFormat(props.locale, {
     month: 'short',
@@ -349,7 +395,7 @@ const formatShortDate = (date: string): string => {
   return new Intl.DateTimeFormat(props.locale, {
     month: 'short',
     day: 'numeric'
-  }).format(new Date(date))
+  }).format(parseLocalDate(date))
 }
 
 const formatBlockedDates = (dates: string[]): string => {
@@ -394,8 +440,8 @@ const isErrorBlocked = (dateString: string): boolean => {
 
 // Enhanced blocked dates and checkout-only dates detection
 const getInvalidDatesInRange = (startDate: string, endDate: string, includeEndDate = false): { blockedDates: string[], checkoutOnlyDates: string[] } => {
-  const start = new Date(startDate)
-  const end = new Date(endDate)
+  const start = parseLocalDate(startDate)
+  const end = parseLocalDate(endDate)
   const current = new Date(start)
   const blockedDates: string[] = []
   const checkoutOnlyDates: string[] = []
@@ -438,6 +484,20 @@ const isRangeEnd = (dateString: string): boolean => {
   return dateString === props.modelValue.checkOut
 }
 
+// NEW: Hover/range-preview - while a check-in is set but no check-out has
+// been chosen yet, highlight the dates between check-in and the currently
+// hovered date so the user can preview what range they're about to select.
+const isDayInHoverPreview = (dateString: string): boolean => {
+  const { checkIn, checkOut } = props.modelValue
+  if (!checkIn || checkOut || !hoveredDate.value) return false
+  if (dateString === checkIn) return false
+
+  const start = checkIn < hoveredDate.value ? checkIn : hoveredDate.value
+  const end = checkIn < hoveredDate.value ? hoveredDate.value : checkIn
+
+  return dateString >= start && dateString <= end
+}
+
 const getDayAriaLabel = (day: CalendarDay): string => {
   const date = day.date.toLocaleDateString(props.locale, {
     weekday: 'long',
@@ -446,9 +506,31 @@ const getDayAriaLabel = (day: CalendarDay): string => {
     day: 'numeric'
   })
 
+  const disabled = isDayDisabled(day)
   const status = getEffectiveStatus(day)
   const price = getDayPrice(day)
-  return `${date}, ${status}${price ? `, ${formatPrice(price)}` : ''}`
+
+  const stateParts: string[] = []
+
+  if (disabled) {
+    stateParts.push('unavailable')
+  } else {
+    if (isRangeStart(day.dateString)) {
+      stateParts.push('check-in date')
+    } else if (isRangeEnd(day.dateString)) {
+      stateParts.push('check-out date')
+    } else if (isDaySelected(day.dateString)) {
+      stateParts.push('selected')
+    } else if (isDayInRange(day.dateString)) {
+      stateParts.push('in selected range')
+    }
+    stateParts.push(status)
+  }
+
+  const stateLabel = stateParts.length ? `, ${stateParts.join(', ')}` : ''
+  const priceLabel = price && !disabled ? `, ${formatPrice(price)}` : ''
+
+  return `${date}${stateLabel}${priceLabel}`
 }
 
 // NEW: Error handling methods
@@ -470,6 +552,53 @@ const createSelectionError = (type: SelectionError['type'], dates?: string[]): S
     message: messages[type],
     blockedDates: (type === 'blocked-dates-in-range' || type === 'checkout-only-in-range') ? dates : undefined
   }
+}
+
+// NEW: Validate a finalized check-in/check-out range against blocked dates,
+// checkout-only dates, and per-stay min/max stay requirements. Returns the
+// first applicable SelectionError, or null if the range is valid.
+const validateSelection = (startDate: string, endDate: string): SelectionError | null => {
+  const { blockedDates, checkoutOnlyDates } = getInvalidDatesInRange(startDate, endDate, true)
+
+  // getInvalidDatesInRange only scans the dates strictly between the two
+  // endpoints, so look up the endpoints themselves directly by their
+  // date-string keys (sidesteps any Date-parsing timezone pitfalls, and
+  // matters when re-validating a selection after availabilityData changes).
+  const startStatus = availabilityMap.value.get(startDate)?.status
+  const endStatus = availabilityMap.value.get(endDate)?.status
+
+  if (startStatus === 'blocked' && !blockedDates.includes(startDate)) {
+    blockedDates.unshift(startDate)
+  }
+  if (endStatus === 'blocked' && !blockedDates.includes(endDate)) {
+    blockedDates.push(endDate)
+  }
+
+  if (blockedDates.length > 0) {
+    return createSelectionError('blocked-dates-in-range', blockedDates)
+  }
+
+  if (checkoutOnlyDates.length > 0) {
+    return createSelectionError('checkout-only-in-range', checkoutOnlyDates)
+  }
+
+  // Min/max stay requirements are conventionally defined on the check-in
+  // date's availability entry.
+  const checkInAvailability = availabilityMap.value.get(startDate)
+  if (checkInAvailability?.minStay || checkInAvailability?.maxStay) {
+    const nights = Math.ceil(
+      (parseLocalDate(endDate).getTime() - parseLocalDate(startDate).getTime()) / (1000 * 60 * 60 * 24)
+    )
+
+    if (checkInAvailability.minStay && nights < checkInAvailability.minStay) {
+      return createSelectionError('min-stay-not-met')
+    }
+    if (checkInAvailability.maxStay && nights > checkInAvailability.maxStay) {
+      return createSelectionError('max-stay-exceeded')
+    }
+  }
+
+  return null
 }
 
 const clearSelection = () => {
@@ -549,37 +678,27 @@ const handleDayClick = (day: CalendarDay) => {
       }
     }
 
-    // Check for blocked and checkout-only dates in the range
-    const { blockedDates, checkoutOnlyDates } = getInvalidDatesInRange(startDate, endDate, true)
-    const endDateStatus = getEffectiveStatus({ date: new Date(endDate), dateString: endDate } as CalendarDay)
-    
-    // Handle blocked dates (including end date if blocked)
-    if (blockedDates.length > 0 || endDateStatus === 'blocked') {
-      const allBlockedDates = [...blockedDates]
-      if (endDateStatus === 'blocked') {
-        allBlockedDates.push(endDate)
+    // Validate the full range: blocked dates, checkout-only dates in the
+    // middle, and min/max stay requirements for the check-in date.
+    const rangeError = validateSelection(startDate, endDate)
+
+    if (rangeError) {
+      selectionError.value = rangeError
+      emit('selection-error', rangeError)
+
+      // Blocked/checkout-only ranges restart the selection from the clicked
+      // date - unless that date is itself checkout-only, which can never be
+      // a valid check-in date (same invariant every other branch enforces).
+      if (rangeError.type === 'blocked-dates-in-range' || rangeError.type === 'checkout-only-in-range') {
+        const newValue = clickedStatus === 'checkout-only'
+          ? { checkIn: null, checkOut: null }
+          : { checkIn: clickedDate, checkOut: null }
+        emit('update:modelValue', newValue)
+        emit('selection-change', newValue)
+        isSelectingRange.value = clickedStatus !== 'checkout-only'
       }
-      const error = createSelectionError('blocked-dates-in-range', allBlockedDates)
-      selectionError.value = error
-      emit('selection-error', error)
-
-      const newValue = { checkIn: clickedDate, checkOut: null }
-      emit('update:modelValue', newValue)
-      emit('selection-change', newValue)
-      isSelectingRange.value = true
-      return
-    }
-
-    // Handle checkout-only dates within the range (not at the end)
-    if (checkoutOnlyDates.length > 0) {
-      const error = createSelectionError('checkout-only-in-range', checkoutOnlyDates)
-      selectionError.value = error
-      emit('selection-error', error)
-
-      const newValue = { checkIn: clickedDate, checkOut: null }
-      emit('update:modelValue', newValue)
-      emit('selection-change', newValue)
-      isSelectingRange.value = true
+      // min-stay/max-stay violations leave the existing check-in in place so
+      // the user can pick a different check-out date instead of restarting.
       return
     }
 
@@ -594,6 +713,22 @@ const handleDayHover = (day: CalendarDay) => {
   if (isDayDisabled(day)) return
   hoveredDate.value = day.dateString
 }
+
+const clearHoverPreview = () => {
+  hoveredDate.value = null
+}
+
+// NEW: Roving-tabindex keyboard navigation over the day-cell grid. Each month
+// always renders a fixed 7-column grid, and activating a cell (Enter/Space)
+// runs the exact same logic as clicking it - including the click-disabled
+// guard, since that check lives at the top of handleDayClick itself.
+const gridNav = useGridKeyboardNav(() => calendarDays.value.length, {
+  columns: 7,
+  onActivate: (index) => {
+    const day = calendarDays.value[index]
+    if (day) handleDayClick(day)
+  }
+})
 
 const previousMonth = () => {
   if (!canGoPrevious.value) return
@@ -612,7 +747,7 @@ const nextMonth = () => {
 // Initialize calendar
 onMounted(() => {
   if (props.modelValue.checkIn) {
-    const checkInDate = new Date(props.modelValue.checkIn)
+    const checkInDate = parseLocalDate(props.modelValue.checkIn)
     currentDate.value = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), 1)
   }
 })
@@ -627,7 +762,7 @@ watch(() => props.modelValue, (newValue, oldValue) => {
 
   // Navigate to check-in month when model value changes
   if (newValue.checkIn && newValue.checkIn !== oldValue?.checkIn) {
-    const checkInDate = new Date(newValue.checkIn)
+    const checkInDate = parseLocalDate(newValue.checkIn)
     currentDate.value = new Date(checkInDate.getFullYear(), checkInDate.getMonth(), 1)
   }
 }, { deep: true })
@@ -635,6 +770,21 @@ watch(() => props.modelValue, (newValue, oldValue) => {
 watch(priceCalculation, (newCalculation) => {
   emit('price-calculation', newCalculation)
 }, { immediate: true })
+
+// NEW: Re-validate an already-made selection if availabilityData changes
+// (e.g. a host app updates availability asynchronously after a date within
+// the current selection has already been chosen) and surface a
+// selectionError if a date in range has since become blocked/invalid.
+watch(() => props.availabilityData, () => {
+  const { checkIn, checkOut } = props.modelValue
+  if (!checkIn || !checkOut) return
+
+  const error = validateSelection(checkIn, checkOut)
+  if (error) {
+    selectionError.value = error
+    emit('selection-error', error)
+  }
+}, { deep: true })
 </script>
 
 <style scoped>
@@ -705,6 +855,7 @@ watch(priceCalculation, (newCalculation) => {
 
 .calendar-body {
   padding: 16px;
+  position: relative;
 }
 
 .calendar-grid-container {
@@ -712,6 +863,53 @@ watch(priceCalculation, (newCalculation) => {
   grid-template-columns: repeat(7, minmax(0, 1fr));
   width: 100%;
   gap: 2px;
+}
+
+.calendar-grid-container.is-loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* NEW: Lightweight loading affordance shown over the day grid while a host
+   app is fetching availabilityData asynchronously (see the isLoading prop). */
+.calendar-loading-overlay {
+  position: absolute;
+  inset: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #4b5563;
+  pointer-events: none;
+}
+
+.theme-dark .calendar-loading-overlay {
+  background: rgba(17, 24, 39, 0.5);
+  color: #d1d5db;
+}
+
+.loading-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(49, 130, 206, 0.25);
+  border-top-color: #3182ce;
+  animation: calendarSpin 0.8s linear infinite;
+}
+
+.theme-dark .loading-spinner {
+  border-color: rgba(96, 165, 250, 0.25);
+  border-top-color: #60a5fa;
+}
+
+@keyframes calendarSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .weekdays {
@@ -800,6 +998,22 @@ watch(priceCalculation, (newCalculation) => {
   color: white !important;
 }
 
+/* NEW: Hover/range-preview - lighter, dashed variant so it stays visually
+   distinct from a confirmed in-range selection while a check-out is still
+   being chosen. */
+.day-cell.hover-preview:not(.in-range):not(.selected):not(.range-start):not(.range-end) {
+  background: #ebf8ff !important;
+  color: #2c5282 !important;
+  box-shadow: inset 0 0 0 1px #90cdf4;
+  border-radius: 0;
+}
+
+.theme-dark .day-cell.hover-preview:not(.in-range):not(.selected):not(.range-start):not(.range-end) {
+  background: rgba(59, 130, 246, 0.1) !important;
+  color: #f8fafc !important;
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.5);
+}
+
 .day-content {
   display: flex;
   flex-direction: column;
@@ -852,6 +1066,36 @@ watch(priceCalculation, (newCalculation) => {
 
 .day-cell.blocked:not(.disabled):hover {
   background: #fee2e2 !important;
+}
+
+/* NEW: Non-color status markers - available/blocked are otherwise only
+   distinguished by pastel background color (green vs red), which is a
+   colorblind-accessibility problem. Add a small shape-based marker in the
+   corner of each cell so the two states are also distinguishable by shape,
+   similar to how checkout-only already uses a two-tone diagonal pattern. */
+.day-cell.available:not(.disabled):not(.selected):not(.range-start):not(.range-end)::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.day-cell.blocked:not(.disabled)::after {
+  content: '\2715';
+  position: absolute;
+  bottom: 0;
+  right: 2px;
+  font-size: 8px;
+  line-height: 1;
+  color: currentColor;
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 /* Past dates - neutral styling (overrides everything) */

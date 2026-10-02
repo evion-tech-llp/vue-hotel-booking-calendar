@@ -31,7 +31,7 @@
     <div v-if="showHeader" class="scheduler-header">
       <!-- Navigation Controls -->
       <div v-if="showNavigation" class="nav-controls">
-        <button type="button" @click="navigatePrevious" class="nav-btn" :aria-label="labels.previousPeriod">
+        <button type="button" @click="navigatePrevious" class="nav-btn" :disabled="!canGoPrevious" :aria-label="labels.previousPeriod">
           <span class="nav-arrow">&#8249;</span>
         </button>
 
@@ -39,7 +39,7 @@
           {{ labels.today }}
         </button>
 
-        <button type="button" @click="navigateNext" class="nav-btn" :aria-label="labels.nextPeriod">
+        <button type="button" @click="navigateNext" class="nav-btn" :disabled="!canGoNext" :aria-label="labels.nextPeriod">
           <span class="nav-arrow">&#8250;</span>
         </button>
       </div>
@@ -74,6 +74,8 @@
         :categories="categories"
         :highlight-today="highlightToday"
         :first-day-of-week="firstDayOfWeek"
+        :conflicting-event-ids="conflictingEventIds"
+        :no-events-label="labels.noEvents"
         @month-click="handleMonthClick"
         @date-click="handleDateClick"
       />
@@ -91,6 +93,8 @@
         :highlight-weekends="highlightWeekends"
         :max-events-per-slot="maxEventsPerSlot"
         :show-week-numbers="showWeekNumbers"
+        :conflicting-event-ids="conflictingEventIds"
+        :no-events-label="labels.noEvents"
         @date-click="handleDateClick"
         @event-click="handleEventClick"
         @slot-click="handleSlotClick"
@@ -113,6 +117,8 @@
         :show-current-time-indicator="showCurrentTimeIndicator"
         :slot-height="resolvedSlotHeight.weekly"
         :event-min-height="eventMinHeight"
+        :conflicting-event-ids="conflictingEventIds"
+        :no-events-label="labels.noEvents"
         @date-click="handleDateClick"
         @event-click="handleEventClick"
         @slot-click="handleSlotClick"
@@ -133,6 +139,7 @@
         :show-current-time-indicator="showCurrentTimeIndicator"
         :slot-height="resolvedSlotHeight.daily"
         :event-min-height="eventMinHeight"
+        :conflicting-event-ids="conflictingEventIds"
         @event-click="handleEventClick"
         @slot-click="handleSlotClick"
       />
@@ -150,6 +157,7 @@
         :show-current-time-indicator="showCurrentTimeIndicator"
         :slot-height="resolvedSlotHeight.hourly"
         :event-min-height="eventMinHeight"
+        :conflicting-event-ids="conflictingEventIds"
         @event-click="handleEventClick"
         @slot-click="handleSlotClick"
       />
@@ -183,8 +191,10 @@ import type {
   SchedulerCalendarEmits,
   SchedulerViewType,
   ResourceEvent,
-  TimeSlot
+  TimeSlot,
+  EventConflict
 } from '../types'
+import { parseLocalDate } from '../utils/date'
 
 // Sub-components
 import YearlyView from './scheduler/YearlyView.vue'
@@ -200,7 +210,7 @@ const props = withDefaults(defineProps<SchedulerCalendarProps>(), {
   selectedDate: () => new Date(),
   view: 'monthly',
   theme: 'light',
-  locale: 'en-US',
+  locale: 'en-GB',
   timeInterval: 60,
   workingHours: () => ({ start: 9, end: 17, daysOfWeek: [1, 2, 3, 4, 5] }),
   showWeekNumbers: false,
@@ -376,8 +386,19 @@ const toDateString = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
-// Navigation methods
-const navigatePrevious = () => {
+// Computed: min/max date bounds, resolved to Date objects
+const minDateObj = computed<Date | null>(() => {
+  if (!props.minDate) return null
+  return typeof props.minDate === 'string' ? parseLocalDate(props.minDate) : new Date(props.minDate)
+})
+
+const maxDateObj = computed<Date | null>(() => {
+  if (!props.maxDate) return null
+  return typeof props.maxDate === 'string' ? parseLocalDate(props.maxDate) : new Date(props.maxDate)
+})
+
+// Helpers: compute the prospective date a previous/next navigation would land on
+const getPreviousDate = (): Date => {
   const newDate = new Date(currentDate.value)
 
   switch (currentView.value) {
@@ -396,12 +417,10 @@ const navigatePrevious = () => {
       break
   }
 
-  currentDate.value = newDate
-  emit('update:selectedDate', newDate)
-  emitDateRangeChange()
+  return newDate
 }
 
-const navigateNext = () => {
+const getNextDate = (): Date => {
   const newDate = new Date(currentDate.value)
 
   switch (currentView.value) {
@@ -420,13 +439,51 @@ const navigateNext = () => {
       break
   }
 
+  return newDate
+}
+
+// Computed: whether navigation is still within the [minDate, maxDate] bounds
+const canGoPrevious = computed(() => {
+  if (!minDateObj.value) return true
+  return getPreviousDate() >= minDateObj.value
+})
+
+const canGoNext = computed(() => {
+  if (!maxDateObj.value) return true
+  return getNextDate() <= maxDateObj.value
+})
+
+// Clamp a date to the configured [minDate, maxDate] bounds
+const clampToBounds = (date: Date): Date => {
+  let clamped = date
+  if (minDateObj.value && clamped < minDateObj.value) clamped = new Date(minDateObj.value)
+  if (maxDateObj.value && clamped > maxDateObj.value) clamped = new Date(maxDateObj.value)
+  return clamped
+}
+
+// Navigation methods
+const navigatePrevious = () => {
+  if (!canGoPrevious.value) return
+
+  const newDate = getPreviousDate()
+
+  currentDate.value = newDate
+  emit('update:selectedDate', newDate)
+  emitDateRangeChange()
+}
+
+const navigateNext = () => {
+  if (!canGoNext.value) return
+
+  const newDate = getNextDate()
+
   currentDate.value = newDate
   emit('update:selectedDate', newDate)
   emitDateRangeChange()
 }
 
 const goToToday = () => {
-  currentDate.value = new Date()
+  currentDate.value = clampToBounds(new Date())
   emit('update:selectedDate', currentDate.value)
   emitDateRangeChange()
 }
@@ -498,10 +555,66 @@ const handleMonthClick = (month: number) => {
 }
 
 const handleDateClick = (dateString: string) => {
-  currentDate.value = new Date(dateString)
+  currentDate.value = parseLocalDate(dateString)
   emit('date-click', dateString)
   emit('update:selectedDate', currentDate.value)
 }
+
+// Compute a [start, end] millisecond range for an event, expanding all-day
+// events to the full calendar day(s) they span.
+const getEventRange = (event: ResourceEvent): [number, number] => {
+  if (event.allDay) {
+    const start = parseLocalDate(event.start)
+    start.setHours(0, 0, 0, 0)
+    const end = parseLocalDate(event.end)
+    end.setHours(23, 59, 59, 999)
+    return [start.getTime(), end.getTime()]
+  }
+  return [new Date(event.start).getTime(), new Date(event.end).getTime()]
+}
+
+const eventsOverlap = (a: ResourceEvent, b: ResourceEvent): boolean => {
+  const [aStart, aEnd] = getEventRange(a)
+  const [bStart, bEnd] = getEventRange(b)
+  return aStart < bEnd && bStart < aEnd
+}
+
+// Computed: map of eventId -> ids of events it conflicts with
+const conflictMap = computed<Map<string, string[]>>(() => {
+  const map = new Map<string, string[]>()
+  const events = props.events || []
+
+  for (let i = 0; i < events.length; i++) {
+    for (let j = i + 1; j < events.length; j++) {
+      if (eventsOverlap(events[i], events[j])) {
+        const aConflicts = map.get(events[i].id) || []
+        aConflicts.push(events[j].id)
+        map.set(events[i].id, aConflicts)
+
+        const bConflicts = map.get(events[j].id) || []
+        bConflicts.push(events[i].id)
+        map.set(events[j].id, bConflicts)
+      }
+    }
+  }
+
+  return map
+})
+
+// Flat list of event ids that have at least one conflict, passed down to child views
+const conflictingEventIds = computed<string[]>(() => Array.from(conflictMap.value.keys()))
+
+// Emit a conflict-detected event for each conflicting event whenever the event list changes
+watch(() => props.events, () => {
+  conflictMap.value.forEach((ids, eventId) => {
+    const conflict: EventConflict = {
+      eventId,
+      conflictingEventIds: ids,
+      message: labels.value.conflictWarning
+    }
+    emit('conflict-detected', conflict)
+  })
+}, { immediate: true, deep: true })
 
 const handleEventClick = (event: ResourceEvent) => {
   emit('event-click', event)
@@ -661,6 +774,21 @@ watch(() => props.enabledViews, (enabledViews) => {
 .nav-btn:focus {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
+}
+
+.nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.nav-btn:disabled:hover {
+  background: white;
+  border-color: #e2e8f0;
+}
+
+.theme-dark .nav-btn:disabled:hover {
+  background: #334155;
+  border-color: #475569;
 }
 
 .theme-dark .nav-btn {

@@ -121,6 +121,8 @@ export interface DashboardTextLabels {
   available?: string
   createBooking?: string
   clickForDetails?: string
+  verticalView?: string
+  horizontalView?: string
 }
 
 // Dashboard Calendar Props

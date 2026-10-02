@@ -33,14 +33,14 @@
     <div class="time-slots-container">
       <div class="time-slots">
         <div
-          v-for="slot in timeSlots"
+          v-for="(slot, slotIndex) in timeSlots"
           :key="slot.time"
           class="time-slot-row"
         >
           <!-- Time Label -->
-          <div 
+          <div
             class="slot-time-label"
-            :class="{ 
+            :class="{
               'working-hour': slot.isWorkingHour,
               'hour-start': slot.minute === 0
             }"
@@ -49,13 +49,18 @@
           </div>
 
           <!-- Slot Content -->
-          <div 
+          <div
             class="slot-content"
             :class="{
               'working-hour': slot.isWorkingHour,
               'current-slot': isCurrentSlot(slot)
             }"
+            :ref="el => slotContentNav.setCellRef(el, slotIndex)"
+            :tabindex="slotContentNav.isTabbable(slotIndex) ? 0 : -1"
+            role="button"
+            :aria-label="`${slot.formattedTime}${getEventsForSlot(slot).length > 0 ? ', has events' : ''}`"
             @click="handleSlotClick(slot)"
+            @keydown="slotContentNav.handleKeydown($event, slotIndex)"
           >
             <!-- Current Time Indicator -->
             <div v-if="showCurrentTimeIndicator && isCurrentSlot(slot)" class="current-time-line" :style="{ top: `${currentMinuteInSlot}%` }">
@@ -68,11 +73,15 @@
                 v-for="event in getEventsForSlot(slot)"
                 :key="event.id"
                 class="slot-event"
+                :class="{ 'has-conflict': isConflicting(event) }"
                 :style="getEventStyle(event)"
                 @click.stop="handleEventClick(event)"
               >
                 <div class="event-main">
-                  <span class="event-title">{{ event.title }}</span>
+                  <span class="event-title">
+                    <span v-if="isConflicting(event)" class="conflict-icon" title="Conflicts with another event" aria-label="Conflicts with another event">&#9888;</span>
+                    {{ event.title }}
+                  </span>
                   <span class="event-duration">{{ formatEventDuration(event) }}</span>
                 </div>
                 <div v-if="event.description" class="event-desc">{{ event.description }}</div>
@@ -106,8 +115,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { ResourceEvent, EventCategory, WorkingHours, TimeInterval } from '../../types'
+import { parseLocalDate } from '../../utils/date'
+import { useGridKeyboardNav } from '../../composables/useGridKeyboardNav'
 
 interface TimeSlotData {
   time: string
@@ -128,12 +139,14 @@ interface Props {
   showCurrentTimeIndicator?: boolean
   slotHeight?: number
   eventMinHeight?: number
+  conflictingEventIds?: string[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showCurrentTimeIndicator: true,
   slotHeight: 60,
-  eventMinHeight: 20
+  eventMinHeight: 20,
+  conflictingEventIds: () => []
 })
 
 const emit = defineEmits<{
@@ -143,6 +156,11 @@ const emit = defineEmits<{
 
 const intervalOptions: TimeInterval[] = [15, 30, 60]
 const selectedInterval = ref<TimeInterval>(props.timeInterval)
+
+// Keep the interval selector in sync if the consumer changes the timeInterval prop externally
+watch(() => props.timeInterval, (val) => {
+  selectedInterval.value = val
+})
 
 const currentDateString = computed(() => toDateString(props.currentDate))
 
@@ -256,38 +274,41 @@ const isCurrentSlot = (slot: TimeSlotData): boolean => {
 
 const getDayEvents = (): ResourceEvent[] => {
   return props.events.filter(event => {
-    const eventStart = new Date(event.start)
-    const eventEnd = new Date(event.end)
-    const checkDate = new Date(currentDateString.value)
-    
+    const eventStart = parseLocalDate(event.start)
+    const eventEnd = parseLocalDate(event.end)
+    const checkDate = parseLocalDate(currentDateString.value)
+
     const startOfDay = new Date(checkDate)
     startOfDay.setHours(0, 0, 0, 0)
-    
+
     const endOfDay = new Date(checkDate)
     endOfDay.setHours(23, 59, 59, 999)
-    
+
     return eventStart <= endOfDay && eventEnd >= startOfDay
   })
 }
 
 const getEventsForSlot = (slot: TimeSlotData): ResourceEvent[] => {
+  const slotStart = new Date(props.currentDate)
+  slotStart.setHours(slot.hour, slot.minute, 0, 0)
+
+  const slotEnd = new Date(slotStart)
+  slotEnd.setMinutes(slotEnd.getMinutes() + selectedInterval.value)
+
   return props.events.filter(event => {
     if (event.allDay) return false
-    
+
     const eventStart = new Date(event.start)
     const eventEnd = new Date(event.end)
-    
-    const eventDateStr = toDateString(eventStart)
-    if (eventDateStr !== currentDateString.value) return false
-    
-    const slotStart = new Date(props.currentDate)
-    slotStart.setHours(slot.hour, slot.minute, 0, 0)
-    
-    const slotEnd = new Date(slotStart)
-    slotEnd.setMinutes(slotEnd.getMinutes() + selectedInterval.value)
-    
+
+    // Overlap test rather than a same-day-only check, so events that cross midnight
+    // (e.g. 22:00 -> 02:00 next day) still show up in the slots they actually touch.
     return eventStart < slotEnd && eventEnd > slotStart
   })
+}
+
+const isConflicting = (event: ResourceEvent): boolean => {
+  return props.conflictingEventIds.includes(event.id)
 }
 
 const getEventStyle = (event: ResourceEvent): Record<string, string> => {
@@ -329,24 +350,40 @@ const formatEventDuration = (event: ResourceEvent): string => {
 
 const handleSlotClick = (slot: TimeSlotData) => {
   const start = `${currentDateString.value}T${slot.time}:00`
-  
+
   const endDate = new Date(props.currentDate)
   endDate.setHours(slot.hour, slot.minute + selectedInterval.value, 0, 0)
   const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`
-  const end = `${currentDateString.value}T${endTime}:00`
-  
-  emit('slot-click', { 
-    start, 
-    end, 
-    date: currentDateString.value, 
+  // If the interval rolled over into the next calendar day, build `end` from endDate's own
+  // date rather than re-gluing it to the slot's day - otherwise the final slot(s) of the day
+  // would produce an end time earlier than the start.
+  const endDateString = toDateString(endDate)
+  const end = `${endDateString}T${endTime}:00`
+
+  emit('slot-click', {
+    start,
+    end,
+    date: currentDateString.value,
     hour: slot.hour,
-    minute: slot.minute 
+    minute: slot.minute
   })
 }
 
 const handleEventClick = (event: ResourceEvent) => {
   emit('event-click', event)
 }
+
+// Keyboard navigation: slot-content list (single column, one row per time slot)
+const slotContentNav = useGridKeyboardNav(
+  () => timeSlots.value.length,
+  {
+    columns: 1,
+    onActivate: (index) => {
+      const slot = timeSlots.value[index]
+      if (slot) handleSlotClick(slot)
+    }
+  }
+)
 </script>
 
 <style scoped>
@@ -553,7 +590,7 @@ const handleEventClick = (event: ResourceEvent) => {
 /* Slot Content */
 .slot-content {
   position: relative;
-  min-height: 50px;
+  min-height: var(--slot-height, 60px);
   padding: 4px 8px;
   background: white;
   cursor: pointer;
@@ -562,6 +599,11 @@ const handleEventClick = (event: ResourceEvent) => {
 
 .slot-content:hover {
   background: #f8fafc;
+}
+
+.slot-content:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
 }
 
 .theme-dark .slot-content {
@@ -665,6 +707,15 @@ const handleEventClick = (event: ResourceEvent) => {
 
 .location-icon {
   font-size: 10px;
+}
+
+.slot-event.has-conflict {
+  border: 1px dashed #d97706;
+}
+
+.conflict-icon {
+  font-size: 11px;
+  margin-right: 2px;
 }
 
 /* Stats Section */
