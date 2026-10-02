@@ -27,6 +27,7 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 👥 **Guest Management** - View guest initials with full names on hover  
 📱 **No Horizontal Scroll** - All dates fit perfectly on any screen size  
 🔗 **Event-Driven** - Emits events for parent component to handle bookings  
+⚠️ **Conflict Flagging** - Overlapping/double-booked rooms are visually flagged instead of hidden  
 💅 **Elegant Design** - Clean white aesthetic with subtle shadows
 
 ### 📆 **Resource Scheduler Calendar** (NEW!)
@@ -49,6 +50,24 @@ A comprehensive Vue 3 calendar component suite designed specifically for hotel b
 🌍 **Custom Text Labels** - Full internationalization and custom terminology support  
 📅 **Flexible Navigation** - Optional previous month navigation for historical data  
 🔧 **Highly Customizable** - Extensive props and styling options
+
+## 🆕 What's New in v1.3.0
+
+- 🐛 **Timezone-Safe Date Parsing** - Fixed a bug where booking/event dates near month or day boundaries could render incorrectly (e.g. a departure date still showing as booked) in negative-UTC-offset timezones
+- 🐛 **Overlapping Bookings Flagged** - `HotelDashboardCalendar` now visually flags double-booked rooms instead of silently hiding the conflict
+- 🐛 **Checkout-Only Rule Fixed** - Closed an edge case that allowed a checkout-only date to be used as a check-in date
+- ✅ **Min/Max Stay Enforcement** - `minStay`/`maxStay` on `DateAvailability` entries are now actually enforced
+- 🐛 **Single-Day Stay Fixed** - `allowSingleDay` selections are now billed as 1 night (previously resulted in a non-functional 0-night selection)
+- ✅ **Conflict Detection** - `ResourceSchedulerCalendar` now detects overlapping events, emits `conflict-detected`, and shows a visual warning indicator in all 5 views
+- ✅ **Date-Range Hover Preview** - `HotelBookingCalendar` now previews the would-be range when hovering a date after selecting check-in
+- ✅ **Loading State** - New `isLoading` prop on `HotelBookingCalendar` shows a loading overlay over the day grid
+- ✅ **Mobile Toggle Labels** - New `verticalView`/`horizontalView` text labels for `HotelDashboardCalendar`'s mobile view switcher
+- 🐛 **Scheduler Navigation Bounds** - `minDate`/`maxDate` on `ResourceSchedulerCalendar` are now actually enforced when navigating
+- 🐛 **Time-Slot Boundary Fixes** - Fixed invalid slot boundaries at the last hour of the day, and overnight (cross-midnight) events now appear in both days' hour grids (Daily/Weekly/Hourly views)
+- 🐛 **Yearly View First-Day-Of-Week** - Mini-calendars in `YearlyView` now correctly respect the `firstDayOfWeek` prop
+- 🐛 **Slot Height Fixed** - `slotHeight` now actually affects rendered row height in Weekly/Hourly views (previously only affected internal positioning math)
+- 🔄 **Default Locale Changed** - `ResourceSchedulerCalendar`'s default `locale` changed from `'en-US'` to `'en-GB'`
+- ♿ **Accessibility** - Full keyboard navigation (arrow keys, Enter/Space) and proper ARIA roles/labels on every interactive calendar cell, across all three components including all 5 scheduler views
 
 ## 🆕 What's New in v1.2.0
 
@@ -131,7 +150,7 @@ yarn add vue-hotel-booking-calendar@latest
 **📦 Package Info:**
 
 - [View on npm](https://www.npmjs.com/package/vue-hotel-booking-calendar)
-- Bundle size: ~16KB gzipped (both components with new features)
+- Bundle size: ~23KB gzipped JS (ESM) + ~10KB gzipped CSS (all three components)
 - Zero dependencies (peer: Vue 3+)
 - Full TypeScript support with enhanced interfaces
 
@@ -407,6 +426,28 @@ const recurringEvent: ResourceEvent = {
 }
 ```
 
+### Conflict Detection
+
+The scheduler automatically detects overlapping events - two events conflict when their time ranges intersect (all-day events are treated as spanning their full calendar day(s) for this comparison). Conflicting events get a visual warning indicator in all 5 views, and a `conflict-detected` event is emitted for each event involved in a conflict:
+
+```typescript
+const handleConflict = (conflict: EventConflict) => {
+  console.log(conflict.eventId)             // the event that has a conflict
+  console.log(conflict.conflictingEventIds) // ids of the event(s) it overlaps with
+  console.log(conflict.message)             // human-readable warning message
+}
+```
+
+```vue
+<template>
+  <ResourceSchedulerCalendar
+    :events="events"
+    :categories="categories"
+    @conflict-detected="handleConflict"
+  />
+</template>
+```
+
 ### Views
 
 | View | Description |
@@ -419,7 +460,7 @@ const recurringEvent: ResourceEvent = {
 
 ## 💰 Guest Booking Calendar
 
-Enhanced booking experience for guests:
+Enhanced booking experience for guests. Once a check-in date is selected, hovering another date previews the would-be check-in/check-out range before the check-out date is confirmed:
 
 ```vue
 <script setup lang="ts">
@@ -613,6 +654,16 @@ const availabilityData = [
 ]
 ```
 
+### Minimum & Maximum Stay
+
+Each `DateAvailability` entry can also set `minStay`/`maxStay` (in nights) on the check-in date to enforce a per-date stay-length rule. These are enforced when a check-out date is selected: a stay shorter than `minStay` or longer than `maxStay` is rejected with a `min-stay-not-met` or `max-stay-exceeded` selection error.
+
+```typescript
+const availabilityData = [
+  { date: '2025-01-15', status: 'available', price: 120, minStay: 2, maxStay: 7 },
+]
+```
+
 ## 🛠 Component Props
 
 ### 🏷️ HotelBookingCalendar (Guest Calendar)
@@ -629,11 +680,12 @@ const availabilityData = [
 | `showPriceCalculation` | `Boolean`     | `true`                              | Show booking summary                |
 | `showSelectionErrors`  | `Boolean`     | `true`                              | Show error messages                 |
 | `disablePastDates`     | `Boolean`     | `true`                              | Disable past dates                  |
-| `allowSingleDay`       | `Boolean`     | `false`                             | Allow same-day check-in/out         |
+| `allowSingleDay`       | `Boolean`     | `false`                             | Allow same-day check-in/out (billed as 1 night) |
 | `allowPreviousMonthNavigation` | `Boolean` | `false`                         | Allow navigation to previous months |
 | `textLabels`           | `Object`      | `{}`                                | Custom text labels for UI elements  |
 | `minDate`              | `String/Date` | `null`                              | Minimum selectable date             |
 | `maxDate`              | `String/Date` | `null`                              | Maximum selectable date             |
+| `isLoading`            | `Boolean`     | `false`                             | Show a loading overlay over the day grid (e.g. while `availabilityData` is being fetched asynchronously) |
 
 ### 🏨 HotelDashboardCalendar (Hotel Management)
 
@@ -660,7 +712,9 @@ const availabilityData = [
 | `firstDayOfWeek` | `Number` | `0`               | First day of week (0=Sunday, 1=Monday)   |
 | `showAllDaySlot` | `Boolean`| `true`            | Show all-day events section              |
 | `theme`          | `String` | `'light'`         | Theme ('light' or 'dark')                |
-| `locale`         | `String` | `'en-US'`         | Locale for date/time formatting          |
+| `locale`         | `String` | `'en-GB'`         | Locale for date/time formatting          |
+| `minDate`        | `String/Date` | `null`       | Minimum navigable date (disables "previous" past this bound) |
+| `maxDate`        | `String/Date` | `null`       | Maximum navigable date (disables "next" past this bound) |
 | `textLabels`     | `Object` | `{}`              | Custom text labels for UI elements       |
 
 ## 📡 Component Events
@@ -695,6 +749,7 @@ const availabilityData = [
 | `date-click`           | `string`                     | Date clicked (YYYY-MM-DD)     |
 | `view-change`          | `SchedulerViewType`          | View changed                  |
 | `date-range-change`    | `{ start, end }`             | Visible date range changed    |
+| `conflict-detected`    | `EventConflict`              | Emitted for each event that overlaps another event |
 
 ## 🎯 TypeScript Support
 
@@ -728,6 +783,7 @@ import type {
   SchedulerViewType,
   WorkingHours,
   RecurrenceRule,
+  EventConflict,
 } from 'vue-hotel-booking-calendar'
 
 // Text Label Interfaces
@@ -754,6 +810,8 @@ interface DashboardTextLabels {
   available?: string
   createBooking?: string
   clickForDetails?: string
+  verticalView?: string   // Mobile view-toggle button label (default: 'Vertical')
+  horizontalView?: string // Mobile view-toggle button label (default: 'Horizontal')
 }
 ```
 
@@ -823,6 +881,12 @@ interface WorkingHours {
   sunday?: { start: string; end: string; enabled: boolean }
 }
 
+interface EventConflict {
+  eventId: string               // Event that has a conflict
+  conflictingEventIds: string[] // Ids of the event(s) it overlaps with
+  message: string                // Human-readable warning message
+}
+
 type SchedulerViewType = 'yearly' | 'monthly' | 'weekly' | 'daily' | 'hourly'
 ```
 
@@ -852,13 +916,13 @@ Override CSS custom properties:
 
 ## ♿ Accessibility
 
-Both components include comprehensive accessibility features:
+All three components (including the 5 `ResourceSchedulerCalendar` views) include comprehensive accessibility features:
 
-- Full keyboard navigation
+- Full keyboard navigation - arrow keys to move between calendar cells, Enter/Space to activate the focused cell
+- Roving-tabindex focus management across each grid
+- ARIA roles and labels on every interactive calendar cell (e.g. `role="button"`, `aria-label`, `aria-selected`/`aria-pressed` where applicable)
 - Screen reader support
-- ARIA labels and descriptions
 - High contrast support
-- Focus management
 - Semantic HTML structure
 
 ## 📱 Browser Support

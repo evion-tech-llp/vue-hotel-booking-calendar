@@ -3,15 +3,21 @@
     <!-- Year Grid - 4 columns x 3 rows -->
     <div class="months-grid">
       <div
-        v-for="month in months"
+        v-for="(month, monthIndex) in months"
         :key="month.month"
         class="month-card"
         :class="{ 'current-month': month.isCurrentMonth, 'has-events': month.hasEvents }"
+        :ref="el => monthCardNav.setCellRef(el, monthIndex)"
+        :tabindex="monthCardNav.isTabbable(monthIndex) ? 0 : -1"
+        role="button"
+        :aria-label="`${month.name} ${month.year}, ${month.eventCount} event${month.eventCount !== 1 ? 's' : ''}`"
         @click="handleMonthClick(month.month)"
+        @keydown="monthCardNav.handleKeydown($event, monthIndex)"
       >
         <!-- Month Header -->
         <div class="month-header">
           <span class="month-name">{{ month.name }}</span>
+          <span v-if="monthHasConflict(month)" class="conflict-badge" title="Conflicts with another event" aria-label="Conflicts with another event">&#9888;</span>
           <span v-if="month.eventCount > 0" class="event-count">{{ month.eventCount }}</span>
         </div>
 
@@ -29,7 +35,12 @@
               v-else
               class="mini-day"
               :class="getDayClasses(month, day)"
+              :ref="el => monthDayNavs[month.month].setCellRef(el, index)"
+              :tabindex="monthDayNavs[month.month].isTabbable(index) ? 0 : -1"
+              role="button"
+              :aria-label="getDayAriaLabel(month, day)"
               @click.stop="handleDateClick(month, day)"
+              @keydown.stop="monthDayNavs[month.month].handleKeydown($event, index)"
             >
               {{ day }}
             </div>
@@ -48,6 +59,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Empty State -->
+    <div v-if="totalEvents === 0" class="no-events-message">{{ noEventsLabel }}</div>
 
     <!-- Year Summary -->
     <div class="year-summary">
@@ -74,6 +88,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ResourceEvent, EventCategory, SchedulerMonth } from '../../types'
+import { parseLocalDate } from '../../utils/date'
+import { useGridKeyboardNav } from '../../composables/useGridKeyboardNav'
 
 interface Props {
   year: number
@@ -83,11 +99,15 @@ interface Props {
   categories: EventCategory[]
   highlightToday?: boolean
   firstDayOfWeek?: number
+  conflictingEventIds?: string[]
+  noEventsLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   highlightToday: true,
-  firstDayOfWeek: 0
+  firstDayOfWeek: 0,
+  conflictingEventIds: () => [],
+  noEventsLabel: 'No events'
 })
 
 const emit = defineEmits<{
@@ -154,12 +174,12 @@ const averageEventsPerMonth = computed(() => {
 
 const getEventCountForMonth = (month: number): number => {
   return props.events.filter(event => {
-    const eventStart = new Date(event.start)
-    const eventEnd = new Date(event.end)
-    
+    const eventStart = parseLocalDate(event.start)
+    const eventEnd = parseLocalDate(event.end)
+
     const monthStart = new Date(props.year, month, 1)
     const monthEnd = new Date(props.year, month + 1, 0, 23, 59, 59)
-    
+
     return eventStart <= monthEnd && eventEnd >= monthStart
   }).length
 }
@@ -168,32 +188,33 @@ const getMonthDays = (month: SchedulerMonth): (number | null)[] => {
   const firstDay = new Date(props.year, month.month, 1)
   const lastDay = new Date(props.year, month.month + 1, 0)
   const daysInMonth = lastDay.getDate()
-  
-  const startOffset = firstDay.getDay()
-  
+
+  const dayOfWeek = firstDay.getDay()
+  const startOffset = (dayOfWeek - props.firstDayOfWeek + 7) % 7
+
   const days: (number | null)[] = []
-  
+
   for (let i = 0; i < startOffset; i++) {
     days.push(null)
   }
-  
+
   for (let d = 1; d <= daysInMonth; d++) {
     days.push(d)
   }
-  
+
   return days
 }
 
 const getMonthEventDays = (month: SchedulerMonth): number[] => {
   const eventDays = new Set<number>()
-  
+
   props.events.forEach(event => {
-    const eventStart = new Date(event.start)
-    const eventEnd = new Date(event.end)
-    
+    const eventStart = parseLocalDate(event.start)
+    const eventEnd = parseLocalDate(event.end)
+
     const monthStart = new Date(props.year, month.month, 1)
     const monthEnd = new Date(props.year, month.month + 1, 0)
-    
+
     if (eventStart <= monthEnd && eventEnd >= monthStart) {
       const startDay = eventStart.getMonth() === month.month && eventStart.getFullYear() === props.year
         ? eventStart.getDate()
@@ -201,34 +222,49 @@ const getMonthEventDays = (month: SchedulerMonth): number[] => {
       const endDay = eventEnd.getMonth() === month.month && eventEnd.getFullYear() === props.year
         ? eventEnd.getDate()
         : monthEnd.getDate()
-      
+
       for (let d = startDay; d <= endDay; d++) {
         eventDays.add(d)
       }
     }
   })
-  
+
   return Array.from(eventDays)
 }
 
 const getTopCategories = (month: SchedulerMonth): EventCategory[] => {
   const categoryIds = new Set<string>()
-  
+
   props.events.forEach(event => {
-    const eventStart = new Date(event.start)
-    const eventEnd = new Date(event.end)
-    
+    const eventStart = parseLocalDate(event.start)
+    const eventEnd = parseLocalDate(event.end)
+
     const monthStart = new Date(props.year, month.month, 1)
     const monthEnd = new Date(props.year, month.month + 1, 0)
-    
+
     if (eventStart <= monthEnd && eventEnd >= monthStart && event.categoryId) {
       categoryIds.add(event.categoryId)
     }
   })
-  
+
   return props.categories
     .filter(c => categoryIds.has(c.id))
     .slice(0, 5)
+}
+
+// Whether any event overlapping this month has a detected conflict
+const monthHasConflict = (month: SchedulerMonth): boolean => {
+  if (props.conflictingEventIds.length === 0) return false
+
+  const monthStart = new Date(props.year, month.month, 1)
+  const monthEnd = new Date(props.year, month.month + 1, 0, 23, 59, 59)
+
+  return props.events.some(event => {
+    if (!props.conflictingEventIds.includes(event.id)) return false
+    const eventStart = parseLocalDate(event.start)
+    const eventEnd = parseLocalDate(event.end)
+    return eventStart <= monthEnd && eventEnd >= monthStart
+  })
 }
 
 const getDayClasses = (month: SchedulerMonth, day: number): Record<string, boolean> => {
@@ -253,6 +289,38 @@ const handleDateClick = (month: SchedulerMonth, day: number) => {
   const dateString = `${props.year}-${String(month.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   emit('date-click', dateString)
 }
+
+const getDayAriaLabel = (month: SchedulerMonth, day: number): string => {
+  const hasEvent = getMonthEventDays(month).includes(day)
+  return `${month.name} ${day}, ${props.year}${hasEvent ? ', has events' : ''}`
+}
+
+// Keyboard navigation: month-card grid (4 columns on desktop)
+const monthCardNav = useGridKeyboardNav(
+  () => months.value.length,
+  {
+    columns: 4,
+    onActivate: (index) => {
+      const month = months.value[index]
+      if (month) handleMonthClick(month.month)
+    }
+  }
+)
+
+// Keyboard navigation: one instance per month's mini day-grid (7 columns)
+const monthDayNavs = Array.from({ length: 12 }, (_, m) =>
+  useGridKeyboardNav(
+    () => getMonthDays(months.value[m]).length,
+    {
+      columns: 7,
+      onActivate: (index) => {
+        const days = getMonthDays(months.value[m])
+        const day = days[index]
+        if (day !== null) handleDateClick(months.value[m], day)
+      }
+    }
+  )
+)
 </script>
 
 <style scoped>
@@ -302,6 +370,12 @@ const handleDateClick = (month: SchedulerMonth, day: number) => {
   border-color: #cbd5e1;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
+}
+
+.month-card:focus-visible,
+.mini-day:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
 .theme-dark .month-card {
@@ -356,6 +430,29 @@ const handleDateClick = (month: SchedulerMonth, day: number) => {
 .theme-dark .event-count {
   background: #1e3a8a;
   color: #93c5fd;
+}
+
+.conflict-badge {
+  font-size: 11px;
+  color: #d97706;
+  cursor: help;
+}
+
+.theme-dark .conflict-badge {
+  color: #fbbf24;
+}
+
+.no-events-message {
+  text-align: center;
+  padding: 24px;
+  margin-top: 16px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.theme-dark .no-events-message {
+  color: #64748b;
 }
 
 /* Mini Calendar */

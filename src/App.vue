@@ -21,11 +21,14 @@
           <strong>Custom text labels demo</strong>: Notice the simplified language like "Back/Forward", "Your Stay", "Book This Stay", etc.
           Base price: £85/night. Select dates to see pricing and booking flow.
         </p>
+        <!-- allow-single-day demonstrates the fixed single-day-booking flow: clicking the same
+             date twice now bills as 1 night instead of being stuck at 0. -->
+        <button type="button" class="demo-control-btn" @click="simulateLoading">Simulate Loading State</button>
         <HotelBookingCalendar v-model="guestSelection" :availability-data="guestAvailabilityData" :base-price="85"
           currency="GBP" :show-price-calculation="true" :show-selection-errors="true" theme="light"
-          :allow-previous-month-navigation="true" :text-labels="guestCalendarLabels"
-          @selection-error="handleSelectionError" @price-calculation="handlePriceCalculation"
-          @book-now="handleBookNow" />
+          :allow-previous-month-navigation="true" :allow-single-day="true" :is-loading="isDemoLoading"
+          :text-labels="guestCalendarLabels" @selection-error="handleSelectionError"
+          @price-calculation="handlePriceCalculation" @book-now="handleBookNow" />
       </div>
 
       <!-- Hotel Dashboard Demo -->
@@ -38,6 +41,9 @@
           <br><strong>Click bookings</strong> to emit booking-click event to parent for detailed handling.
           <br><strong>Click empty cells</strong> to emit booking-create event to parent.
           <br><strong>Parent handles</strong> all modals, forms, and booking management logic.
+          <br><strong>Room 101</strong> has two overlapping bookings to demonstrate the conflict warning (⚠) on the
+          booking-span cell. <strong>Room 202</strong> has a booking that checks out on the last day of the month to
+          demonstrate that the departure day correctly shows as free.
         </p>
         <HotelDashboardCalendar :rooms="sampleRooms" :bookings="sampleBookings" :selected-month="dashboardMonth"
           :status-config="customStatusConfig" theme="light" :allow-previous-month-navigation="true" 
@@ -54,6 +60,9 @@
           <br><strong>Features:</strong> Multiple views, working hours, event categories, time intervals (15/30/60 min), conflict detection.
           <br><strong>New in v1.2.0:</strong> Configurable views, slot heights, responsive breakpoints, header/legend options, compact mode.
           <br><strong>Click on time slots</strong> to create events. <strong>Click on events</strong> to view details.
+          <br><strong>Budget Review Meeting / Vendor Negotiation Call</strong> genuinely overlap to demonstrate the
+          conflict-detection warning indicator. Conflict payloads are also logged to the browser console
+          (<code>conflict-detected</code> event) - open devtools to see them.
         </p>
         <ResourceSchedulerCalendar
           :events="schedulerEvents"
@@ -80,6 +89,7 @@
           @event-click="handleSchedulerEventClick"
           @slot-click="handleSchedulerSlotClick"
           @event-create="handleSchedulerEventCreate"
+          @conflict-detected="handleSchedulerConflictDetected"
         />
       </div>
 
@@ -161,13 +171,24 @@ import type {
   ResourceEvent,
   EventCategory,
   SchedulerViewType,
-  TimeSlot
+  TimeSlot,
+  EventConflict
 } from './types'
 
 // Guest calendar state
 const guestSelection = ref<DateRange>({ checkIn: null, checkOut: null })
 const dashboardMonth = ref(new Date())
 const today = new Date()
+
+// Demo-only loading toggle: simulates an async availabilityData fetch so the
+// isLoading overlay can be seen without wiring up a real backend.
+const isDemoLoading = ref(false)
+const simulateLoading = () => {
+  isDemoLoading.value = true
+  setTimeout(() => {
+    isDemoLoading.value = false
+  }, 2000)
+}
 
 // Resource Scheduler state
 const schedulerDate = ref(new Date())
@@ -206,6 +227,22 @@ const getDynamicDate = (daysFromToday: number): string => {
   date.setDate(date.getDate() + daysFromToday)
   return date.toISOString().split('T')[0]
 }
+
+// Formats a Date using local Y/M/D components (avoids the UTC-shift pitfall
+// of toISOString() when a date needs to line up exactly with calendar days,
+// such as "the last day of this month" below).
+const formatDateString = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// Last day of the currently displayed dashboard month, used to demonstrate
+// that a booking's departure day correctly shows as free.
+const lastDayOfCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+const departureDemoCheckIn = new Date(lastDayOfCurrentMonth)
+departureDemoCheckIn.setDate(departureDemoCheckIn.getDate() - 2)
 
 // Sample data for guest calendar
 const guestAvailabilityData = computed<DateAvailability[]>(() => [
@@ -290,6 +327,26 @@ const sampleBookings = computed<Booking[]>(() => [
     checkIn: getDynamicDate(12),
     checkOut: getDynamicDate(14),
     status: 'cancelled'
+  },
+  // Genuinely overlaps booking #1 (room 101, same date range overlap) to
+  // demonstrate the double-booking conflict warning (⚠) on the booking-span cell.
+  {
+    id: '7',
+    guestName: 'Robert Garcia',
+    roomNumber: '101',
+    checkIn: getDynamicDate(3),
+    checkOut: getDynamicDate(6),
+    status: 'pending'
+  },
+  // Checks out on the last day of the currently displayed month, to
+  // demonstrate that the departure day correctly shows as free.
+  {
+    id: '8',
+    guestName: 'Olivia Martinez',
+    roomNumber: '202',
+    checkIn: formatDateString(departureDemoCheckIn),
+    checkOut: formatDateString(lastDayOfCurrentMonth),
+    status: 'confirmed'
   }
 ])
 
@@ -439,6 +496,26 @@ const schedulerEvents = computed<ResourceEvent[]>(() => [
       dayOfMonth: 15,
       endAfterOccurrences: 6
     }
+  },
+  // CONFLICT DETECTION EXAMPLE: these two genuinely overlap (11:00-11:30) to
+  // demonstrate the conflict-detection warning indicator across views.
+  {
+    id: '12',
+    title: 'Budget Review Meeting',
+    description: 'Quarterly budget review with finance team',
+    start: `${getDynamicDate(6)}T10:00:00`,
+    end: `${getDynamicDate(6)}T11:30:00`,
+    categoryId: 'meeting',
+    location: 'Conference Room A'
+  },
+  {
+    id: '13',
+    title: 'Vendor Negotiation Call',
+    description: 'Overlaps with Budget Review Meeting - demonstrates the conflict-detection indicator',
+    start: `${getDynamicDate(6)}T11:00:00`,
+    end: `${getDynamicDate(6)}T12:00:00`,
+    categoryId: 'appointment',
+    location: 'Phone'
   }
 ])
 
@@ -526,6 +603,15 @@ const handleSchedulerSlotClick = (slot: TimeSlot) => {
 
 const handleSchedulerEventCreate = (data: { start: string; end: string; allDay?: boolean }) => {
   alert(`New event request:\n\nStart: ${data.start}\nEnd: ${data.end}\nAll Day: ${data.allDay ? 'Yes' : 'No'}\n\n(Would open event creation form)`)
+}
+
+// NEW: Conflict detection - logged (not alert()) since this fires once per
+// conflicting event on mount and whenever the events list changes, so a
+// blocking dialog per conflict would be disruptive. Open devtools to inspect
+// the payload.
+const handleSchedulerConflictDetected = (conflict: EventConflict) => {
+  // eslint-disable-next-line no-console
+  console.log('Scheduler conflict detected:', conflict)
 }
 
 // Utility functions
@@ -641,6 +727,24 @@ h1 {
   line-height: 1.7;
   margin: 0 0 40px 0;
   font-weight: 400;
+}
+
+.demo-control-btn {
+  display: inline-block;
+  margin-bottom: 20px;
+  padding: 10px 20px;
+  background: #1a202c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.demo-control-btn:hover {
+  background: #2d3748;
 }
 
 .features-grid {

@@ -28,7 +28,12 @@
             'weekend': highlightWeekends && day.isWeekend,
             'selected': isSelected(day.dateString)
           }"
+          :ref="el => dayCellNav.setCellRef(el, index)"
+          :tabindex="dayCellNav.isTabbable(index) ? 0 : -1"
+          role="button"
+          :aria-label="getDayAriaLabel(day)"
           @click="handleDayClick(day)"
+          @keydown="dayCellNav.handleKeydown($event, index)"
         >
           <!-- Day Number -->
           <div class="day-header">
@@ -46,10 +51,12 @@
               v-for="event in getEventsForDay(day.dateString).slice(0, maxEventsPerSlot)"
               :key="event.id"
               class="event-item"
+              :class="{ 'has-conflict': isConflicting(event) }"
               :style="getEventStyle(event)"
               :title="event.title"
               @click.stop="handleEventClick(event)"
             >
+              <span v-if="isConflicting(event)" class="conflict-icon" title="Conflicts with another event" aria-label="Conflicts with another event">&#9888;</span>
               <span v-if="!event.allDay" class="event-time">
                 {{ formatEventTime(event.start) }}
               </span>
@@ -59,12 +66,17 @@
         </div>
       </template>
     </div>
+
+    <!-- Empty State -->
+    <div v-if="!hasAnyEvents" class="no-events-message">{{ noEventsLabel }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ResourceEvent, EventCategory, SchedulerDay } from '../../types'
+import { parseLocalDate } from '../../utils/date'
+import { useGridKeyboardNav } from '../../composables/useGridKeyboardNav'
 
 interface Props {
   currentDate: Date
@@ -77,13 +89,17 @@ interface Props {
   highlightWeekends?: boolean
   maxEventsPerSlot?: number
   showWeekNumbers?: boolean
+  conflictingEventIds?: string[]
+  noEventsLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   highlightToday: true,
   highlightWeekends: false,
   maxEventsPerSlot: 3,
-  showWeekNumbers: false
+  showWeekNumbers: false,
+  conflictingEventIds: () => [],
+  noEventsLabel: 'No events'
 })
 
 const emit = defineEmits<{
@@ -178,14 +194,14 @@ const isWorkingDay = (date: Date): boolean => {
 
 const getEventsForDateString = (dateString: string): ResourceEvent[] => {
   return props.events.filter(event => {
-    const eventStart = new Date(event.start)
-    const eventEnd = new Date(event.end)
-    const checkDate = new Date(dateString)
-    
+    const eventStart = parseLocalDate(event.start)
+    const eventEnd = parseLocalDate(event.end)
+    const checkDate = parseLocalDate(dateString)
+
     eventStart.setHours(0, 0, 0, 0)
     eventEnd.setHours(23, 59, 59, 999)
     checkDate.setHours(12, 0, 0, 0)
-    
+
     return checkDate >= eventStart && checkDate <= eventEnd
   }).sort((a, b) => {
     if (a.allDay && !b.allDay) return -1
@@ -201,6 +217,30 @@ const getEventsForDay = (dateString: string): ResourceEvent[] => {
 const isSelected = (dateString: string): boolean => {
   return dateString === selectedDateString.value
 }
+
+// Whether any day currently rendered has events (drives the empty-state message)
+const hasAnyEvents = computed(() => calendarDays.value.some(day => day.events.length > 0))
+
+const isConflicting = (event: ResourceEvent): boolean => {
+  return props.conflictingEventIds.includes(event.id)
+}
+
+const getDayAriaLabel = (day: SchedulerDay): string => {
+  const events = getEventsForDay(day.dateString)
+  return `${day.date.toDateString()}${events.length > 0 ? `, ${events.length} event${events.length !== 1 ? 's' : ''}` : ''}`
+}
+
+// Keyboard navigation for the day-cell grid (7 columns)
+const dayCellNav = useGridKeyboardNav(
+  () => calendarDays.value.length,
+  {
+    columns: 7,
+    onActivate: (index) => {
+      const day = calendarDays.value[index]
+      if (day) handleDayClick(day)
+    }
+  }
+)
 
 const getEventStyle = (event: ResourceEvent): Record<string, string> => {
   let backgroundColor = event.backgroundColor || '#3b82f6'
@@ -343,6 +383,11 @@ const getWeekNumber = (date: Date): number => {
   z-index: 10;
 }
 
+.day-cell:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
 .theme-dark .day-cell {
   background: #1e293b;
   border-color: #334155;
@@ -466,6 +511,28 @@ const getWeekNumber = (date: Date): number => {
   margin-right: 3px;
   opacity: 0.8;
   font-size: 9px;
+}
+
+.event-item.has-conflict {
+  border: 1px dashed #d97706;
+}
+
+.conflict-icon {
+  margin-right: 2px;
+  font-size: 9px;
+}
+
+.no-events-message {
+  text-align: center;
+  padding: 24px;
+  margin-top: 8px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.theme-dark .no-events-message {
+  color: #64748b;
 }
 
 /* Responsive - Tablet */
